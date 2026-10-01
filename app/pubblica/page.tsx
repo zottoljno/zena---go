@@ -25,6 +25,7 @@ export default function PubblicaAnnuncio() {
   const [descrizione, setDescrizione] = useState('');
   const [luogoRitiro, setLuogoRitiro] = useState('');
   const [contatto, setContatto] = useState('');
+  const [immagini, setImmagini] = useState<string[]>([]);
   const [caricamento, setCaricamento] = useState(false);
   const [errore, setErrore] = useState('');
   const [inviato, setInviato] = useState(false);
@@ -32,6 +33,30 @@ export default function PubblicaAnnuncio() {
   const inputStyle = {
     color: '#0f172a',
     backgroundColor: '#ffffff',
+  };
+
+  const gestisciFotoMultiple = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const fileArray = Array.from(files);
+    const spazioRimanente = 10 - immagini.length;
+    const fileDaCaricare = fileArray.slice(0, spazioRimanente);
+
+    fileDaCaricare.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImmagini((prev) => {
+          if (prev.length >= 10) return prev;
+          return [...prev, reader.result as string];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const rimuoviFoto = (indice: number) => {
+    setImmagini((prev) => prev.filter((_, i) => i !== indice));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,6 +73,7 @@ export default function PubblicaAnnuncio() {
           luogo_ritiro: luogoRitiro,
           descrizione,
           contatto,
+          immagini,
         },
       ]);
 
@@ -101,6 +127,7 @@ export default function PubblicaAnnuncio() {
                   setDescrizione('');
                   setLuogoRitiro('');
                   setContatto('');
+                  setImmagini([]);
                   setInviato(false);
                 }}
                 className="text-sm text-emerald-800 font-medium px-4 py-2 hover:underline"
@@ -117,6 +144,45 @@ export default function PubblicaAnnuncio() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Sezione Caricamento Fino a 10 Foto */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-800">
+                  Foto dell&apos;oggetto ({immagini.length}/10)
+                </label>
+                <span className="text-xs text-slate-500 font-medium">Facoltativo, max 10</span>
+              </div>
+
+              <div className="grid grid-cols-5 gap-2">
+                {immagini.map((img, index) => (
+                  <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-xs">
+                    <img src={img} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => rimuoviFoto(index)}
+                      className="absolute top-1 right-1 bg-black/75 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                {immagini.length < 10 && (
+                  <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 rounded-xl cursor-pointer transition">
+                    <span className="text-xl">📷</span>
+                    <span className="text-[10px] font-semibold text-slate-500 mt-0.5">Aggiungi</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={gestisciFotoMultiple}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-800 mb-1">
                 Cosa vuoi vendere o regalare? *
