@@ -9,7 +9,7 @@ export default function Footer() {
 
   return (
     <>
-     <footer className="mt-20 border-t border-slate-200 bg-slate-50 text-slate-600 pb-44">
+      <footer className="mt-20 border-t border-slate-200 bg-slate-50 text-slate-600">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
             
@@ -80,9 +80,13 @@ export default function Footer() {
             </div>
           </div>
 
+          {/* Striscia del disclaimer */}
           <div className="mt-8 border-t border-slate-200 pt-6 text-xs text-slate-400 text-center sm:text-left">
             Zena &amp; Go è una bacheca tecnica autonoma di annunci tra privati. Non gestisce pagamenti, spedizioni o transazioni economiche dirette.
           </div>
+
+          {/* Spazio vuoto extra in fondo per non farsi coprire dalla barra fissa inferiore */}
+          <div className="h-32 w-full" aria-hidden="true" />
         </div>
       </footer>
 
