@@ -62,7 +62,7 @@ export default function PubblicaAnnuncio() {
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6">
       <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
-          <Link href="/" className="text-sm font-medium text-slate-500 hover:text-slate-800">
+          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">
             ← Torna alla bacheca
           </Link>
           <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 rounded-full border border-emerald-200">
@@ -113,7 +113,7 @@ export default function PubblicaAnnuncio() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-800 mb-1">
                 Cosa vuoi vendere o regalare? *
               </label>
               <input
@@ -122,13 +122,13 @@ export default function PubblicaAnnuncio() {
                 value={titolo}
                 onChange={(e) => setTitolo(e.target.value)}
                 placeholder="es. Libro universitario, Bici da passeggio, Sedia..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-slate-800 mb-1">
                   Prezzo (€) *
                 </label>
                 <input
@@ -139,21 +139,21 @@ export default function PubblicaAnnuncio() {
                   value={prezzo}
                   onChange={(e) => setPrezzo(e.target.value)}
                   placeholder="0 se in regalo"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-slate-800 mb-1">
                   Quartiere / Zona *
                 </label>
                 <select
                   value={quartiere}
                   onChange={(e) => setQuartiere(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                 >
                   {QUARTIERI_GENOVA.map((q) => (
-                    <option key={q} value={q}>
+                    <option key={q} value={q} className="text-slate-900">
                       {q}
                     </option>
                   ))}
@@ -162,7 +162,7 @@ export default function PubblicaAnnuncio() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-800 mb-1">
                 Punto d&apos;incontro suggerito
               </label>
               <input
@@ -170,12 +170,12 @@ export default function PubblicaAnnuncio() {
                 value={luogoRitiro}
                 onChange={(e) => setLuogoRitiro(e.target.value)}
                 placeholder="es. Piazza De Ferrari, Stazione Brignole, via XX Settembre..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-800 mb-1">
                 Descrizione dell&apos;oggetto
               </label>
               <textarea
@@ -183,12 +183,12 @@ export default function PubblicaAnnuncio() {
                 value={descrizione}
                 onChange={(e) => setDescrizione(e.target.value)}
                 placeholder="Indica condizioni d'uso, difetti o dettagli utili..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-800 mb-1">
                 Recapito per contatto (WhatsApp o Telegram) *
               </label>
               <input
@@ -197,7 +197,7 @@ export default function PubblicaAnnuncio() {
                 value={contatto}
                 onChange={(e) => setContatto(e.target.value)}
                 placeholder="es. Numero WhatsApp o username Telegram"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
