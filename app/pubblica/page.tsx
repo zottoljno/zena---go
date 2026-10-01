@@ -29,6 +29,11 @@ export default function PubblicaAnnuncio() {
   const [errore, setErrore] = useState('');
   const [inviato, setInviato] = useState(false);
 
+  const inputStyle = {
+    color: '#0f172a',
+    backgroundColor: '#ffffff',
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCaricamento(true);
@@ -119,10 +124,11 @@ export default function PubblicaAnnuncio() {
               <input
                 type="text"
                 required
+                style={inputStyle}
                 value={titolo}
                 onChange={(e) => setTitolo(e.target.value)}
                 placeholder="es. Libro universitario, Bici da passeggio, Sedia..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
@@ -136,10 +142,11 @@ export default function PubblicaAnnuncio() {
                   min="0"
                   step="0.5"
                   required
+                  style={inputStyle}
                   value={prezzo}
                   onChange={(e) => setPrezzo(e.target.value)}
                   placeholder="0 se in regalo"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                 />
               </div>
 
@@ -149,11 +156,12 @@ export default function PubblicaAnnuncio() {
                 </label>
                 <select
                   value={quartiere}
+                  style={inputStyle}
                   onChange={(e) => setQuartiere(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                 >
                   {QUARTIERI_GENOVA.map((q) => (
-                    <option key={q} value={q} className="text-slate-900">
+                    <option key={q} value={q} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
                       {q}
                     </option>
                   ))}
@@ -167,10 +175,11 @@ export default function PubblicaAnnuncio() {
               </label>
               <input
                 type="text"
+                style={inputStyle}
                 value={luogoRitiro}
                 onChange={(e) => setLuogoRitiro(e.target.value)}
                 placeholder="es. Piazza De Ferrari, Stazione Brignole, via XX Settembre..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
@@ -180,10 +189,11 @@ export default function PubblicaAnnuncio() {
               </label>
               <textarea
                 rows={3}
+                style={inputStyle}
                 value={descrizione}
                 onChange={(e) => setDescrizione(e.target.value)}
                 placeholder="Indica condizioni d'uso, difetti o dettagli utili..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
@@ -194,10 +204,11 @@ export default function PubblicaAnnuncio() {
               <input
                 type="text"
                 required
+                style={inputStyle}
                 value={contatto}
                 onChange={(e) => setContatto(e.target.value)}
                 placeholder="es. Numero WhatsApp o username Telegram"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
 
