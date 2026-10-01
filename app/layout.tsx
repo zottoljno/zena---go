@@ -28,7 +28,7 @@ export default function RootLayout({
               <div className="md:col-span-2 space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xl font-bold tracking-tight text-slate-900">
-                    Zena <span className="text-emerald-600">&</span> Go
+                    Zena <span className="text-emerald-600">&amp;</span> Go
                   </span>
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                     Genova
@@ -39,7 +39,7 @@ export default function RootLayout({
                   Semplice, diretto e a chilometro zero.
                 </p>
                 <p className="text-xs text-slate-400">
-                  © {new Date().getFullYear()} Zena & Go. Tutti i diritti riservati.
+                  © 2026 Zena &amp; Go. Tutti i diritti riservati.
                 </p>
               </div>
 
@@ -93,7 +93,7 @@ export default function RootLayout({
             </div>
 
             <div className="mt-8 border-t border-slate-200 pt-6 text-xs text-slate-400 text-center sm:text-left">
-              Zena & Go è una bacheca tecnica autonoma di annunci tra privati. Non gestisce pagamenti, spedizioni o transazioni economiche dirette.
+              Zena &amp; Go è una bacheca tecnica autonoma di annunci tra privati. Non gestisce pagamenti, spedizioni o transazioni economiche dirette.
             </div>
           </div>
         </footer>
@@ -117,14 +117,14 @@ export default function RootLayout({
                   </h2>
                   <div className="text-sm text-slate-600 space-y-3 leading-relaxed">
                     <p className="font-medium text-slate-800">
-                      Zena & Go promuove lo scambio a mano locale. Per garantire un'esperienza serena, segui sempre queste regole:
+                      Zena &amp; Go promuove lo scambio a mano locale. Per garantire un&apos;esperienza serena, segui sempre queste regole:
                     </p>
                     <ul className="list-disc pl-5 space-y-2">
                       <li>
                         <strong>Incontrati sempre di giorno e in luoghi pubblici frequentati:</strong> Scegli piazze principali (es. Piazza De Ferrari, Piazza della Vittoria), stazioni ferroviarie (Brignole, Principe) o davanti a un bar aperto. Evita vicoli isolati o interni privati.
                       </li>
                       <li>
-                        <strong>Ispeziona l'oggetto prima di pagare:</strong> Verifica che il prodotto sia conforme alla descrizione e funzionante prima di concludere lo scambio.
+                        <strong>Ispeziona l&apos;oggetto prima di pagare:</strong> Verifica che il prodotto sia conforme alla descrizione e funzionante prima di concludere lo scambio.
                       </li>
                       <li>
                         <strong>Nessun anticipo di denaro:</strong> Non inviare mai caparre o pagamenti anticipati con ricariche di carte prepagate o bonifici istantanei a sconosciuti.
@@ -140,11 +140,11 @@ export default function RootLayout({
               {activeModal === 'terms' && (
                 <div className="space-y-4">
                   <h2 className="text-xl font-bold text-slate-900">
-                    Termini e Condizioni d'Uso
+                    Termini e Condizioni d&apos;Uso
                   </h2>
                   <div className="text-sm text-slate-600 space-y-3 leading-relaxed">
                     <p>
-                      1. <strong>Natura del servizio:</strong> Zena & Go offre uno spazio digitale per facilitare la pubblicazione e la consultazione di annunci tra privati domiciliati o residenti a Genova e dintorni.
+                      1. <strong>Natura del servizio:</strong> Zena &amp; Go offre uno spazio digitale per facilitare la pubblicazione e la consultazione di annunci tra privati domiciliati o residenti a Genova e dintorni.
                     </p>
                     <p>
                       2. <strong>Ruolo di Mero Intermediario:</strong> La piattaforma agisce quale mero fornitore di spazio telematico (hosting provider ai sensi del Regolamento UE Digital Services Act). Non interviene nelle trattative, non stabilisce i prezzi e non riceve provvigioni sulle vendite.
@@ -153,7 +153,7 @@ export default function RootLayout({
                       3. <strong>Beni vietati:</strong> È severamente vietato pubblicare annunci relativi a beni contraffatti, armi, sostanze illecite, animali protetti o qualsiasi materiale che violi le leggi italiane vigenti. Gli annunci non conformi saranno rimossi tempestivamente.
                     </p>
                     <p>
-                      4. <strong>Dati personali e contatto:</strong> Gli utenti acconsentono a rendere visibili i dati inseriti volontariamente nell'annuncio al solo scopo di essere contattati per la compravendita.
+                      4. <strong>Dati personali e contatto:</strong> Gli utenti acconsentono a rendere visibili i dati inseriti volontariamente nell&apos;annuncio al solo scopo di essere contattati per la compravendita.
                     </p>
                   </div>
                 </div>
@@ -166,13 +166,13 @@ export default function RootLayout({
                   </h2>
                   <div className="text-sm text-slate-600 space-y-3 leading-relaxed">
                     <p>
-                      1. <strong>Autonomia delle parti:</strong> Qualsiasi accordo verbale, scritto o economico intercorre esclusivamente tra l'acquirente e il venditore. Zena & Go non è parte contrattuale di alcuna transazione.
+                      1. <strong>Autonomia delle parti:</strong> Qualsiasi accordo verbale, scritto o economico intercorre esclusivamente tra l&apos;acquirente e il venditore. Zena &amp; Go non è parte contrattuale di alcuna transazione.
                     </p>
                     <p>
-                      2. <strong>Garanzie sui beni:</strong> La piattaforma non effettua perizie, controlli fisici o attestazioni sull'autenticità, qualità, integrità o provenienza lecita dei beni scambiati.
+                      2. <strong>Garanzie sui beni:</strong> La piattaforma non effettua perizie, controlli fisici o attestazioni sull&apos;autenticità, qualità, integrità o provenienza lecita dei beni scambiati.
                     </p>
                     <p>
-                      3. <strong>Incontri e condotta degli utenti:</strong> Zena & Go declina ogni responsabilità civile e penale per danni, dispute, inadempimenti o incidenti derivanti dagli incontri di persona o dalla condotta individuale degli utenti.
+                      3. <strong>Incontri e condotta degli utenti:</strong> Zena &amp; Go declina ogni responsabilità civile e penale per danni, dispute, inadempimenti o incidenti derivanti dagli incontri di persona o dalla condotta individuale degli utenti.
                     </p>
                   </div>
                 </div>
