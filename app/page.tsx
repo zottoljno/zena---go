@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from 'next/link';
+
 const QUARTIERI = [
   "Centro Storico",
   "Foce",
@@ -87,28 +88,6 @@ export default function Home() {
     quartierePreferito: "San Fruttuoso"
   });
 
-  const [mostraModale, setMostraModale] = useState(false);
-
-  const [nuovoTitolo, setNuovoTitolo] = useState("");
-  const [nuovoPrezzo, setNuovoPrezzo] = useState("");
-  const [nuovoQuartiere, setNuovoQuartiere] = useState(QUARTIERI[0]);
-  const [nuovoContatto, setNuovoContatto] = useState(utente.telefono);
-  const [nuoveImmagini, setNuoveImmagini] = useState<string[]>([]);
-
-  const handleCaricaFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const fileList = Array.from(files);
-    const urls = fileList.map((file) => URL.createObjectURL(file));
-
-    setNuoveImmagini((prev) => [...prev, ...urls].slice(0, 10));
-  };
-
-  const rimuoviFoto = (indexToRemove: number) => {
-    setNuoveImmagini((prev) => prev.filter((_, idx) => idx !== indexToRemove));
-  };
-
   const handleRepostaGratis = (id: number) => {
     setAnnunci((prev) =>
       prev.map((annuncio) =>
@@ -135,29 +114,6 @@ export default function Home() {
       return corrispondeQuartiere && corrispondeTesto;
     });
 
-  const handleCreaAnnuncio = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nuovoTitolo.trim() || !nuovoPrezzo) return;
-
-    const nuovoItem: Annuncio = {
-      id: Date.now(),
-      titolo: nuovoTitolo.trim(),
-      prezzo: Number(nuovoPrezzo),
-      quartiere: nuovoQuartiere,
-      contatto: nuovoContatto.trim(),
-      scadenza: "Scade tra 3 giorni (Gratis)",
-      stato: "attivo",
-      immagini: nuoveImmagini
-    };
-
-    setAnnunci([nuovoItem, ...annunci]);
-
-    setNuovoTitolo("");
-    setNuovoPrezzo("");
-    setNuoveImmagini([]);
-    setMostraModale(false);
-  };
-
   return (
     <main className="min-h-screen bg-[#f3f6fb] text-[#0d1b2a] pb-28">
       {/* Testata Navy minimale */}
@@ -172,12 +128,12 @@ export default function Home() {
             </span>
           </div>
 
-          <button
-            onClick={() => setMostraModale(true)}
-            className="bg-white hover:bg-slate-100 text-[#0d1b2a] font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition active:scale-95 uppercase tracking-wider"
+          <Link
+            href="/pubblica"
+            className="bg-white hover:bg-slate-100 text-[#0d1b2a] font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition active:scale-95 uppercase tracking-wider inline-block"
           >
             + Vendi gratis
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -400,7 +356,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Navigazione inferiore con icone SVG pulite */}
+      {/* Navigazione inferiore */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-2 z-20 flex justify-around max-w-md mx-auto shadow-md">
         <button
           onClick={() => setSezioneAttiva("marketplace")}
@@ -426,141 +382,6 @@ export default function Home() {
           <span className="text-[10px] uppercase tracking-wider">Account</span>
         </button>
       </nav>
-
-      {/* Modale Inserimento Annuncio Fino a 10 Foto */}
-      {mostraModale && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-black text-[#0d1b2a] tracking-tight">
-                  Pubblica su Zena &amp; Go
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">Gratis per 3 giorni • Repost sempre gratuito</p>
-              </div>
-              <button
-                onClick={() => setMostraModale(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreaAnnuncio} className="space-y-3.5 text-sm">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                    Foto dell&apos;oggetto ({nuoveImmagini.length}/10)
-                  </label>
-                  <span className="text-[11px] text-slate-400 font-medium">Max 10 foto</span>
-                </div>
-
-                <div className="grid grid-cols-5 gap-2">
-                  {nuoveImmagini.map((img, index) => (
-                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200">
-                      <img src={img} alt="anteprima" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => rimuoviFoto(index)}
-                        className="absolute top-1 right-1 bg-black/75 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-
-                  {nuoveImmagini.length < 10 && (
-                    <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-[#0d1b2a] bg-slate-50 rounded-xl cursor-pointer transition">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                      </svg>
-                      <span className="text-[9px] font-bold text-slate-500 mt-0.5">Foto</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleCaricaFoto}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  Cosa vendi?
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Es. Casco moto, Chitarra, Scarpe..."
-                  value={nuovoTitolo}
-                  onChange={(e) => setNuovoTitolo(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] font-medium"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                    Prezzo (€)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    placeholder="25"
-                    value={nuovoPrezzo}
-                    onChange={(e) => setNuovoPrezzo(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                    Quartiere
-                  </label>
-                  <select
-                    value={nuovoQuartiere}
-                    onChange={(e) => setNuovoQuartiere(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] bg-white font-medium"
-                  >
-                    {QUARTIERI.map((q) => (
-                      <option key={q} value={q}>
-                        {q}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                  WhatsApp o Telefono
-                </label>
-                <input
-                  type="tel"
-                  placeholder="Es. 3401234567"
-                  value={nuovoContatto}
-                  onChange={(e) => setNuovoContatto(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] font-medium"
-                />
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 leading-relaxed">
-                Durata: <strong>3 giorni gratis</strong>. Se non hai ancora venduto, puoi riattivarlo con un clic gratis dalla scheda Account.
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-[#0d1b2a] hover:bg-[#1b263b] text-white font-black py-3 rounded-xl shadow-md transition uppercase tracking-wider text-xs"
-              >
-                Metti in vendita subito
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
