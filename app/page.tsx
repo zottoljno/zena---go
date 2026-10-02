@@ -38,14 +38,13 @@ export default function Home() {
   const [cerca, setCerca] = useState("");
   const [sezioneAttiva, setSezioneAttiva] = useState<"marketplace" | "profilo">("marketplace");
 
-  // Recupera solo gli annunci approvati da Supabase
+  // Recupera tutti gli annunci da Supabase in ordine di pubblicazione
   const caricaAnnunci = async () => {
     try {
       setCaricamento(true);
       const { data, error } = await supabase
         .from("annunci")
         .select("*")
-        .or("stato.eq.approvato,stato.is.null")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -256,7 +255,7 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Griglietta altre foto caricate */}
+                    {/* Griglia foto aggiuntive */}
                     {item.immagini && item.immagini.length > 1 && (
                       <div className="flex gap-2 overflow-x-auto pt-1 pb-0.5 scrollbar-none">
                         {item.immagini.map((foto, idx) => (
