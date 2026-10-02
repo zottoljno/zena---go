@@ -74,11 +74,30 @@ export default function PubblicaAnnuncio() {
           descrizione,
           contatto,
           immagini,
+          stato: 'in_attesa',
         },
       ]);
 
       if (error) {
         throw error;
+      }
+
+      // Invia la notifica automatica su Telegram
+      try {
+        await fetch('/api/notifica', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            titolo,
+            prezzo,
+            quartiere,
+            contatto,
+            descrizione,
+            immagini,
+          }),
+        });
+      } catch (e) {
+        console.error('Errore invio notifica Telegram:', e);
       }
 
       setInviato(true);
@@ -114,9 +133,9 @@ export default function PubblicaAnnuncio() {
 
         {inviato ? (
           <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-            <h2 className="text-lg font-semibold text-emerald-900 mb-1">Annuncio pubblicato!</h2>
+            <h2 className="text-lg font-semibold text-emerald-900 mb-1">Annuncio inviato per l&apos;approvazione!</h2>
             <p className="text-sm text-emerald-700 mb-4">
-              L&apos;annuncio per &quot;{titolo}&quot; è stato registrato nel database.
+              L&apos;annuncio per &quot;{titolo}&quot; è stato salvato e sarà visibile non appena approvato.
             </p>
             <div className="flex justify-center gap-3">
               <button
