@@ -1,118 +1,77 @@
 "use client";
 
-import { useState } from "react";
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 const QUARTIERI = [
   "Centro Storico",
-  "Foce",
-  "Albaro",
-  "San Fruttuoso",
-  "Marassi",
-  "Sampierdarena",
-  "Sestri Ponente",
-  "Cornigliano",
-  "Rivarolo",
-  "Bolzaneto",
-  "Pontedecimo",
-  "Castelletto",
-  "Molassana",
-  "Struppa",
-  "Quarto",
-  "Quinto",
-  "Nervi",
-  "Pegli",
-  "Pra'",
-  "Voltri"
+  "Carignano / Foce",
+  "Albaro / San Martino",
+  "Castelletto / Manin",
+  "San Fruttuoso / Marassi",
+  "Staglieno / Val Bisagno",
+  "Sampierdarena / San Teodoro",
+  "Cornigliano / Sestri Ponente",
+  "Pegli / Pra' / Voltri",
+  "Quarto / Quinto / Nervi",
+  "Pontedecimo / Bolzaneto / Val Polcevera",
 ];
 
 interface Annuncio {
   id: number;
+  created_at: string;
   titolo: string;
   prezzo: number;
   quartiere: string;
+  luogo_ritiro?: string;
+  descrizione?: string;
   contatto: string;
-  scadenza: string;
-  stato: "attivo" | "scaduto";
-  immagini: string[];
+  immagini?: string[];
 }
 
-const ANNUNCI_INIZIALI: Annuncio[] = [
-  {
-    id: 1,
-    titolo: "Bicicletta da passeggio vintage",
-    prezzo: 40,
-    quartiere: "San Fruttuoso",
-    contatto: "3401234567",
-    scadenza: "Scade tra 2 giorni",
-    stato: "attivo",
-    immagini: [
-      "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80"
-    ]
-  },
-  {
-    id: 2,
-    titolo: "Tavolino da salotto in legno massello",
-    prezzo: 15,
-    quartiere: "Foce",
-    contatto: "3339876543",
-    scadenza: "Scade domani",
-    stato: "attivo",
-    immagini: [
-      "https://images.unsplash.com/photo-1533090161767-e6ffed986b88?auto=format&fit=crop&w=600&q=80"
-    ]
-  },
-  {
-    id: 3,
-    titolo: "Coppia manubri gommati 10kg",
-    prezzo: 20,
-    quartiere: "Marassi",
-    contatto: "3201122334",
-    scadenza: "Scaduto",
-    stato: "scaduto",
-    immagini: [
-      "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=600&q=80"
-    ]
-  }
-];
-
 export default function Home() {
-  const [annunci, setAnnunci] = useState<Annuncio[]>(ANNUNCI_INIZIALI);
+  const [annunci, setAnnunci] = useState<Annuncio[]>([]);
+  const [caricamento, setCaricamento] = useState(true);
   const [quartiereSelezionato, setQuartiereSelezionato] = useState("Tutti i quartieri");
   const [cerca, setCerca] = useState("");
   const [sezioneAttiva, setSezioneAttiva] = useState<"marketplace" | "profilo">("marketplace");
 
-  const [utente] = useState({
-    nome: "Daniele",
-    telefono: "340 0000000",
-    quartierePreferito: "San Fruttuoso"
-  });
+  // Recupera gli annunci veri dal database Supabase
+  const caricaAnnunci = async () => {
+    try {
+      setCaricamento(true);
+      const { data, error } = await supabase
+        .from("annunci")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-  const handleRepostaGratis = (id: number) => {
-    setAnnunci((prev) =>
-      prev.map((annuncio) =>
-        annuncio.id === id
-          ? {
-              ...annuncio,
-              stato: "attivo",
-              scadenza: "Scade tra 3 giorni (Gratis)"
-            }
-          : annuncio
-      )
-    );
+      if (error) {
+        console.error("Errore nel recupero annunci:", error);
+      } else if (data) {
+        setAnnunci(data as Annuncio[]);
+      }
+    } catch (err) {
+      console.error("Errore di rete:", err);
+    } finally {
+      setCaricamento(false);
+    }
   };
 
-  const annunciFiltrati = annunci
-    .filter((a) => a.stato === "attivo")
-    .filter((annuncio) => {
-      const corrispondeQuartiere =
-        quartiereSelezionato === "Tutti i quartieri" ||
-        annuncio.quartiere === quartiereSelezionato;
-      const corrispondeTesto = annuncio.titolo
-        .toLowerCase()
-        .includes(cerca.toLowerCase());
-      return corrispondeQuartiere && corrispondeTesto;
-    });
+  useEffect(() => {
+    caricaAnnunci();
+  }, []);
+
+  // Filtro combinato quartiere + barra di ricerca
+  const annunciFiltrati = annunci.filter((annuncio) => {
+    const corrispondeQuartiere =
+      quartiereSelezionato === "Tutti i quartieri" ||
+      annuncio.quartiere === quartiereSelezionato;
+    const corrispondeTesto =
+      annuncio.titolo.toLowerCase().includes(cerca.toLowerCase()) ||
+      (annuncio.descrizione && annuncio.descrizione.toLowerCase().includes(cerca.toLowerCase()));
+    return corrispondeQuartiere && corrispondeTesto;
+  });
 
   return (
     <main className="min-h-screen bg-[#f3f6fb] text-[#0d1b2a] pb-28">
@@ -130,7 +89,7 @@ export default function Home() {
 
           <Link
             href="/pubblica"
-            className="bg-white hover:bg-slate-100 text-[#0d1b2a] font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition active:scale-95 uppercase tracking-wider inline-block"
+            className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition active:scale-95 uppercase tracking-wider inline-block"
           >
             + Vendi gratis
           </Link>
@@ -141,16 +100,19 @@ export default function Home() {
       <div className="max-w-md mx-auto px-4 pt-4">
         {sezioneAttiva === "marketplace" ? (
           <div className="space-y-4">
+            {/* Barra di ricerca */}
             <div>
               <input
                 type="text"
-                placeholder="Cosa cerchi a Genova? (es. bici, libri...)"
+                placeholder="Cosa cerchi a Genova? (es. libro, bici...)"
                 value={cerca}
                 onChange={(e) => setCerca(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] shadow-xs font-medium placeholder:text-slate-400"
+                style={{ color: "#0f172a", backgroundColor: "#ffffff" }}
+                className="w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] shadow-xs font-medium placeholder:text-slate-400"
               />
             </div>
 
+            {/* Filtro Quartieri */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -164,6 +126,7 @@ export default function Home() {
                   return (
                     <button
                       key={q}
+                      type="button"
                       onClick={() => setQuartiereSelezionato(q)}
                       className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition ${
                         attivo
@@ -178,26 +141,46 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Banner info */}
             <div className="bg-[#e8edf5] border border-[#cbd5e1] rounded-2xl p-3.5">
               <h4 className="text-xs font-black uppercase tracking-wider text-[#0d1b2a]">
-                Zero spedizioni • Annunci a scadenza (3 giorni)
+                Zero spedizioni • Scambio a mano
               </h4>
               <p className="text-xs text-slate-700 font-normal leading-relaxed mt-1">
-                Ogni annuncio resta attivo 3 giorni. Se non hai ancora venduto, <strong>puoi repostarlo gratis quante volte vuoi</strong> per confermare che l&apos;oggetto è ancora disponibile.
+                Contatta direttamente chi vende via WhatsApp per mettervi d&apos;accordo sul punto di ritiro nel quartiere.
               </p>
             </div>
 
+            {/* Lista Annunci */}
             <div className="space-y-3.5 pt-1">
               <div className="flex items-center justify-between">
                 <h2 className="text-xs font-black uppercase tracking-wider text-slate-700">
                   Disponibili adesso ({annunciFiltrati.length})
                 </h2>
-                <span className="text-[11px] font-medium text-slate-500">Solo scambio a mano</span>
+                <button
+                  type="button"
+                  onClick={caricaAnnunci}
+                  className="text-[11px] font-medium text-emerald-600 hover:underline"
+                >
+                  Aggiorna lista ↻
+                </button>
               </div>
 
-              {annunciFiltrati.length === 0 ? (
+              {caricamento ? (
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 text-sm">
+                  Caricamento annunci in corso...
+                </div>
+              ) : annunciFiltrati.length === 0 ? (
                 <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center">
-                  <p className="text-sm font-medium text-slate-500">Nessun articolo attivo in questo quartiere.</p>
+                  <p className="text-sm font-medium text-slate-500">
+                    Nessun annuncio trovato in questo quartiere.
+                  </p>
+                  <Link
+                    href="/pubblica"
+                    className="mt-3 inline-block text-xs font-bold text-emerald-600 hover:underline"
+                  >
+                    Sii il primo a pubblicarne uno!
+                  </Link>
                 </div>
               ) : (
                 annunciFiltrati.map((item) => (
@@ -206,6 +189,7 @@ export default function Home() {
                     className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs space-y-2.5 hover:border-slate-300 transition"
                   >
                     <div className="flex gap-3">
+                      {/* Foto principale */}
                       <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
                         {item.immagini && item.immagini.length > 0 ? (
                           <img
@@ -215,7 +199,7 @@ export default function Home() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-semibold">
-                            Foto
+                            📷
                           </div>
                         )}
 
@@ -226,6 +210,7 @@ export default function Home() {
                         )}
                       </div>
 
+                      {/* Informazioni testo */}
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
                           <div className="flex items-start justify-between gap-1">
@@ -233,24 +218,34 @@ export default function Home() {
                               {item.titolo}
                             </h3>
                             <span className="text-base font-black text-[#0d1b2a] whitespace-nowrap">
-                              {item.prezzo} €
+                              {item.prezzo === 0 ? "In regalo" : `${item.prezzo} €`}
                             </span>
                           </div>
                           <p className="text-[11px] font-medium text-slate-500 mt-0.5">
                             📍 {item.quartiere}
+                            {item.luogo_ritiro ? ` • Ritiro: ${item.luogo_ritiro}` : ""}
                           </p>
+                          {item.descrizione && (
+                            <p className="text-[11px] text-slate-600 line-clamp-1 mt-0.5">
+                              {item.descrizione}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between pt-1">
-                          <span className="text-[11px] font-semibold text-slate-500">
-                            ⏳ {item.scadenza}
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            {new Date(item.created_at).toLocaleDateString("it-IT", {
+                              day: "numeric",
+                              month: "short",
+                            })}
                           </span>
+
                           {item.contatto && (
                             <a
                               href={`https://wa.me/39${item.contatto.replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="bg-[#0d1b2a] hover:bg-[#1b263b] text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs transition"
                             >
                               WhatsApp
                             </a>
@@ -259,6 +254,7 @@ export default function Home() {
                       </div>
                     </div>
 
+                    {/* Griglietta altre foto caricate */}
                     {item.immagini && item.immagini.length > 1 && (
                       <div className="flex gap-2 overflow-x-auto pt-1 pb-0.5 scrollbar-none">
                         {item.immagini.map((foto, idx) => (
@@ -277,79 +273,22 @@ export default function Home() {
             </div>
           </div>
         ) : (
+          /* Scheda Account */
           <div className="space-y-4">
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
               <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
                 <div className="w-12 h-12 rounded-full bg-[#0d1b2a] text-white flex items-center justify-center text-lg font-black tracking-tight">
-                  {utente.nome.charAt(0)}
+                  U
                 </div>
                 <div>
-                  <h2 className="text-base font-black text-[#0d1b2a]">{utente.nome}</h2>
-                  <p className="text-xs font-medium text-slate-500">Genova • {utente.quartierePreferito}</p>
+                  <h2 className="text-base font-black text-[#0d1b2a]">Il tuo Profilo</h2>
+                  <p className="text-xs font-medium text-slate-500">Zena &amp; Go • Genova</p>
                 </div>
               </div>
-
-              <div className="pt-4 space-y-3">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Dati di contatto
-                </h3>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600 font-medium">Telefono / WhatsApp</span>
-                  <span className="font-semibold text-[#0d1b2a]">{utente.telefono}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600 font-medium">Quartiere preferito</span>
-                  <span className="font-semibold text-[#0d1b2a]">{utente.quartierePreferito}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  I tuoi annunci in vendita
-                </h3>
-                <span className="text-xs text-slate-400 font-medium">
-                  {annunci.length} totali
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {annunci.map((annuncio) => (
-                  <div
-                    key={annuncio.id}
-                    className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 bg-slate-50/50"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-[#0d1b2a] truncate">
-                        {annuncio.titolo}
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        {annuncio.prezzo} € • {annuncio.quartiere}
-                      </p>
-                      <p className={`text-[10px] font-bold mt-1 ${
-                        annuncio.stato === "attivo" ? "text-emerald-700" : "text-amber-700"
-                      }`}>
-                        {annuncio.stato === "attivo" ? annuncio.scadenza : "Scaduto dopo 3 giorni"}
-                      </p>
-                    </div>
-
-                    <div>
-                      {annuncio.stato === "scaduto" ? (
-                        <button
-                          onClick={() => handleRepostaGratis(annuncio.id)}
-                          className="bg-[#0d1b2a] hover:bg-[#1b263b] text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs transition"
-                        >
-                          Reposta Gratis
-                        </button>
-                      ) : (
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-md">
-                          Attivo
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="pt-4 space-y-2 text-xs text-slate-600">
+                <p>
+                  Pubblica e scambia oggetti di seconda mano nel tuo quartiere a Genova senza commissioni o spedizioni.
+                </p>
               </div>
             </div>
           </div>
@@ -359,6 +298,7 @@ export default function Home() {
       {/* Navigazione inferiore */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-2 z-20 flex justify-around max-w-md mx-auto shadow-md">
         <button
+          type="button"
           onClick={() => setSezioneAttiva("marketplace")}
           className={`flex flex-col items-center gap-1 transition ${
             sezioneAttiva === "marketplace" ? "text-[#0d1b2a] font-bold" : "text-slate-400 hover:text-slate-600"
@@ -371,6 +311,7 @@ export default function Home() {
         </button>
 
         <button
+          type="button"
           onClick={() => setSezioneAttiva("profilo")}
           className={`flex flex-col items-center gap-1 transition ${
             sezioneAttiva === "profilo" ? "text-[#0d1b2a] font-bold" : "text-slate-400 hover:text-slate-600"
