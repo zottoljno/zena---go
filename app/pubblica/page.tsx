@@ -74,30 +74,12 @@ export default function PubblicaAnnuncio() {
           descrizione,
           contatto,
           immagini,
-          stato: 'in_attesa',
+          stato: 'approvato', // Subito approvato e visibile a tutti
         },
       ]);
 
       if (error) {
         throw error;
-      }
-
-      // Invia la notifica automatica su Telegram
-      try {
-        await fetch('/api/notifica', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            titolo,
-            prezzo,
-            quartiere,
-            contatto,
-            descrizione,
-            immagini,
-          }),
-        });
-      } catch (e) {
-        console.error('Errore invio notifica Telegram:', e);
       }
 
       setInviato(true);
@@ -133,9 +115,9 @@ export default function PubblicaAnnuncio() {
 
         {inviato ? (
           <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-            <h2 className="text-lg font-semibold text-emerald-900 mb-1">Annuncio inviato per l&apos;approvazione!</h2>
+            <h2 className="text-lg font-semibold text-emerald-900 mb-1">Annuncio pubblicato subito!</h2>
             <p className="text-sm text-emerald-700 mb-4">
-              L&apos;annuncio per &quot;{titolo}&quot; è stato salvato e sarà visibile non appena approvato.
+              L&apos;annuncio per &quot;{titolo}&quot; è già online e visibile a tutta Genova.
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -157,13 +139,12 @@ export default function PubblicaAnnuncio() {
                 href="/"
                 className="inline-block bg-emerald-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition"
               >
-                Vai alla home
+                Vai a vederlo in Home
               </Link>
             </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Sezione Caricamento Fino a 10 Foto */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-slate-800">
