@@ -17,7 +17,7 @@ interface Annuncio {
   motivo_segnalazione?: string;
 }
 
-const PIN_SEGRETO = '1926';
+const PIN_SEGRETO = '326996';
 
 export default function AdminPage() {
   const [autenticato, setAutenticato] = useState(false);
