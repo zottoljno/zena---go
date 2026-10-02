@@ -1,316 +1,389 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-const QUARTIERI_GENOVA = [
-  'Centro Storico',
-  'Carignano / Foce',
-  'Albaro / San Martino',
-  'Castelletto / Manin',
-  'San Fruttuoso / Marassi',
-  'Staglieno / Val Bisagno',
-  'Sampierdarena / San Teodoro',
-  'Cornigliano / Sestri Ponente',
-  'Pegli / Pra\' / Voltri',
-  'Quarto / Quinto / Nervi',
-  'Pontedecimo / Bolzaneto / Val Polcevera',
+const QUARTIERI = [
+  "Centro Storico",
+  "Carignano / Foce",
+  "Albaro / San Martino",
+  "Castelletto / Manin",
+  "San Fruttuoso / Marassi",
+  "Staglieno / Val Bisagno",
+  "Sampierdarena / San Teodoro",
+  "Cornigliano / Sestri Ponente",
+  "Pegli / Pra' / Voltri",
+  "Quarto / Quinto / Nervi",
+  "Pontedecimo / Bolzaneto / Val Polcevera",
 ];
 
-// Lista di blocco per proteggere la piattaforma su beni vietati o illeciti
-const PAROLE_VIETATE = [
-  'arma', 'armi', 'pistola', 'fucile', 'coltello', 'munizioni',
-  'droga', 'erba', 'fumo', 'cocaina', 'hashish', 'marijuana', 'cannabis', 'thc', 'cbd',
-  'farmaco', 'medicinale', 'ricetta', 'ansiolitico', 'psicofarmaco', 'viagra',
-  'replica', 'contraffatto', 'falso rolex', 'pezzotto', 'iptv',
-  'prestito', 'investimento', 'bonifico immediato', 'crypto'
-];
+interface Annuncio {
+  id: number;
+  created_at: string;
+  titolo: string;
+  prezzo: number;
+  quartiere: string;
+  luogo_ritiro?: string;
+  descrizione?: string;
+  contatto: string;
+  immagini?: string[];
+  stato?: string;
+  segnalato?: boolean;
+}
 
-export default function PubblicaAnnuncio() {
-  const [titolo, setTitolo] = useState('');
-  const [prezzo, setPrezzo] = useState('');
-  const [quartiere, setQuartiere] = useState(QUARTIERI_GENOVA[0]);
-  const [descrizione, setDescrizione] = useState('');
-  const [luogoRitiro, setLuogoRitiro] = useState('');
-  const [contatto, setContatto] = useState('');
-  const [immagini, setImmagini] = useState<string[]>([]);
-  const [caricamento, setCaricamento] = useState(false);
-  const [errore, setErrore] = useState('');
-  const [inviato, setInviato] = useState(false);
+export default function Home() {
+  const [annunci, setAnnunci] = useState<Annuncio[]>([]);
+  const [caricamento, setCaricamento] = useState(true);
+  const [quartiereSelezionato, setQuartiereSelezionato] = useState("Tutti i quartieri");
+  const [cerca, setCerca] = useState("");
+  const [sezioneAttiva, setSezioneAttiva] = useState<"marketplace" | "profilo">("marketplace");
+  const [annuncioDaSegnalare, setAnnuncioDaSegnalare] = useState<number | null>(null);
+  const [motivo, setMotivo] = useState("");
 
-  const inputStyle = {
-    color: '#0f172a',
-    backgroundColor: '#ffffff',
-  };
-
-  const gestisciFotoMultiple = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const fileArray = Array.from(files);
-    const spazioRimanente = 10 - immagini.length;
-    const fileDaCaricare = fileArray.slice(0, spazioRimanente);
-
-    fileDaCaricare.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImmagini((prev) => {
-          if (prev.length >= 10) return prev;
-          return [...prev, reader.result as string];
-        });
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const rimuoviFoto = (indice: number) => {
-    setImmagini((prev) => prev.filter((_, i) => i !== indice));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCaricamento(true);
-    setErrore('');
-
-    // Controllo parole vietate automatico
-    const testoCompleto = `${titolo} ${descrizione}`.toLowerCase();
-    const parolaTrovata = PAROLE_VIETATE.find((parola) => {
-      const regex = new RegExp(`\\b${parola}\\b`, 'i');
-      return regex.test(testoCompleto);
-    });
-
-    if (parolaTrovata) {
-      setCaricamento(false);
-      setErrore(`L'annuncio non può essere pubblicato perché contiene riferimenti a contenuti o beni non ammessi ("${parolaTrovata}").`);
-      return;
-    }
-
+  const caricaAnnunci = async () => {
     try {
-      const { error } = await supabase.from('annunci').insert([
-        {
-          titolo,
-          prezzo: parseFloat(prezzo) || 0,
-          quartiere,
-          luogo_ritiro: luogoRitiro,
-          descrizione,
-          contatto,
-          immagini,
-          stato: 'approvato',
-          segnalato: false,
-        },
-      ]);
+      setCaricamento(true);
+      const { data, error } = await supabase
+        .from("annunci")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) {
-        throw error;
+        console.error("Errore nel recupero annunci:", error);
+      } else if (data) {
+        setAnnunci(data as Annuncio[]);
       }
-
-      setInviato(true);
-    } catch (err: any) {
-      setErrore(err.message || 'Errore durante la pubblicazione.');
+    } catch (err) {
+      console.error("Errore di rete:", err);
     } finally {
       setCaricamento(false);
     }
   };
 
+  useEffect(() => {
+    caricaAnnunci();
+  }, []);
+
+  const inviaSegnalazione = async (id: number) => {
+    if (!motivo.trim()) {
+      alert("Specifica brevemente il motivo.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("annunci")
+      .update({ segnalato: true, motivo_segnalazione: motivo })
+      .eq("id", id);
+
+    if (!error) {
+      alert("Grazie! L'annuncio è stato segnalato al moderatore per la rimozione.");
+      setAnnuncioDaSegnalare(null);
+      setMotivo("");
+    } else {
+      alert("Errore durante l'invio della segnalazione: " + error.message);
+    }
+  };
+
+  const annunciFiltrati = annunci.filter((annuncio) => {
+    const corrispondeQuartiere =
+      quartiereSelezionato === "Tutti i quartieri" ||
+      annuncio.quartiere === quartiereSelezionato;
+    const corrispondeTesto =
+      annuncio.titolo.toLowerCase().includes(cerca.toLowerCase()) ||
+      (annuncio.descrizione && annuncio.descrizione.toLowerCase().includes(cerca.toLowerCase()));
+    return corrispondeQuartiere && corrispondeTesto;
+  });
+
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6">
-      <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">
-            ← Torna alla bacheca
-          </Link>
-          <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 rounded-full border border-emerald-200">
-            Zena &amp; Go
-          </span>
-        </div>
-
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Pubblica un annuncio</h1>
-        <p className="text-sm text-slate-600 mb-6">
-          Vendi o cedi a mano nel tuo quartiere a Genova. Solo scambi di persona e beni leciti.
-        </p>
-
-        {errore && (
-          <div className="mb-5 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">
-            {errore}
+    <main className="min-h-screen bg-[#f3f6fb] text-[#0d1b2a] pb-28">
+      {/* Testata Navy */}
+      <header className="sticky top-0 z-30 bg-[#0d1b2a] text-white border-b border-[#1b263b] px-4 py-3.5 shadow-md">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-2xl font-black tracking-tight leading-none text-white">
+              Zena &amp; Go
+            </span>
+            <span className="text-[10px] text-slate-300 font-semibold tracking-wider uppercase mt-1">
+              Zero spedizioni • Solo a Genova
+            </span>
           </div>
-        )}
 
-        {inviato ? (
-          <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-            <h2 className="text-lg font-semibold text-emerald-900 mb-1">Annuncio pubblicato!</h2>
-            <p className="text-sm text-emerald-700 mb-4">
-              L&apos;annuncio per &quot;{titolo}&quot; è subito visibile in bacheca.
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setTitolo('');
-                  setPrezzo('');
-                  setDescrizione('');
-                  setLuogoRitiro('');
-                  setContatto('');
-                  setImmagini([]);
-                  setInviato(false);
-                }}
-                className="text-sm text-emerald-800 font-medium px-4 py-2 hover:underline"
-              >
-                Pubblicane un altro
-              </button>
-              <Link
-                href="/"
-                className="inline-block bg-emerald-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition"
-              >
-                Vai alla home
-              </Link>
+          <Link
+            href="/pubblica"
+            className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition active:scale-95 uppercase tracking-wider inline-block"
+          >
+            + Vendi gratis
+          </Link>
+        </div>
+      </header>
+
+      {/* Contenuto Principale */}
+      <div className="max-w-md mx-auto px-4 pt-4">
+        {sezioneAttiva === "marketplace" ? (
+          <div className="space-y-4">
+            <div>
+              <input
+                type="text"
+                placeholder="Cosa cerchi a Genova? (es. libro, bici...)"
+                value={cerca}
+                onChange={(e) => setCerca(e.target.value)}
+                style={{ color: "#0f172a", backgroundColor: "#ffffff" }}
+                className="w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] shadow-xs font-medium placeholder:text-slate-400"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Quartiere di scambio
+                </p>
+                <span className="text-[11px] text-slate-400 font-medium">Genova</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {["Tutti i quartieri", ...QUARTIERI].map((q) => {
+                  const attivo = quartiereSelezionato === q;
+                  return (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setQuartiereSelezionato(q)}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition ${
+                        attivo
+                          ? "bg-[#0d1b2a] text-white shadow-xs"
+                          : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      {q}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-[#e8edf5] border border-[#cbd5e1] rounded-2xl p-3.5">
+              <h4 className="text-xs font-black uppercase tracking-wider text-[#0d1b2a]">
+                Zero spedizioni • Scambio a mano
+              </h4>
+              <p className="text-xs text-slate-700 font-normal leading-relaxed mt-1">
+                Contatta chi vende via WhatsApp per stabilire un punto d&apos;incontro sicuro nel quartiere.
+              </p>
+            </div>
+
+            {/* Lista Annunci */}
+            <div className="space-y-3.5 pt-1">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-700">
+                  Disponibili adesso ({annunciFiltrati.length})
+                </h2>
+                <button
+                  type="button"
+                  onClick={caricaAnnunci}
+                  className="text-[11px] font-medium text-emerald-600 hover:underline"
+                >
+                  Aggiorna lista ↻
+                </button>
+              </div>
+
+              {caricamento ? (
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 text-sm">
+                  Caricamento annunci in corso...
+                </div>
+              ) : annunciFiltrati.length === 0 ? (
+                <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center">
+                  <p className="text-sm font-medium text-slate-500">
+                    Nessun annuncio trovato in questo quartiere.
+                  </p>
+                  <Link
+                    href="/pubblica"
+                    className="mt-3 inline-block text-xs font-bold text-emerald-600 hover:underline"
+                  >
+                    Sii il primo a pubblicarne uno!
+                  </Link>
+                </div>
+              ) : (
+                annunciFiltrati.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs space-y-2.5 hover:border-slate-300 transition"
+                  >
+                    <div className="flex gap-3">
+                      <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+                        {item.immagini && item.immagini.length > 0 ? (
+                          <img
+                            src={item.immagini[0]}
+                            alt={item.titolo}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-semibold">
+                            📷
+                          </div>
+                        )}
+
+                        {item.immagini && item.immagini.length > 1 && (
+                          <span className="absolute bottom-1 right-1 bg-black/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                            +{item.immagini.length - 1}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-start justify-between gap-1">
+                            <h3 className="text-sm font-bold text-[#0d1b2a] truncate leading-snug">
+                              {item.titolo}
+                            </h3>
+                            <span className="text-base font-black text-[#0d1b2a] whitespace-nowrap">
+                              {item.prezzo === 0 ? "In regalo" : `${item.prezzo} €`}
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                            📍 {item.quartiere}
+                            {item.luogo_ritiro ? ` • Ritiro: ${item.luogo_ritiro}` : ""}
+                          </p>
+                          {item.descrizione && (
+                            <p className="text-[11px] text-slate-600 line-clamp-1 mt-0.5">
+                              {item.descrizione}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            {new Date(item.created_at).toLocaleDateString("it-IT", {
+                              day: "numeric",
+                              month: "short",
+                            })}
+                          </span>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAnnuncioDaSegnalare(item.id)}
+                              className="text-[10px] text-slate-400 hover:text-red-600 transition"
+                              title="Segnala annuncio"
+                            >
+                              Segnala ⚠️
+                            </button>
+
+                            {item.contatto && (
+                              <a
+                                href={`https://wa.me/39${item.contatto.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs transition"
+                              >
+                                WhatsApp
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {item.immagini && item.immagini.length > 1 && (
+                      <div className="flex gap-2 overflow-x-auto pt-1 pb-0.5 scrollbar-none">
+                        {item.immagini.map((foto, idx) => (
+                          <img
+                            key={idx}
+                            src={foto}
+                            alt=""
+                            className="w-12 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-800">
-                  Foto dell&apos;oggetto ({immagini.length}/10)
-                </label>
-                <span className="text-xs text-slate-500 font-medium">Facoltativo, max 10</span>
+          <div className="space-y-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
+                <div className="w-12 h-12 rounded-full bg-[#0d1b2a] text-white flex items-center justify-center text-lg font-black tracking-tight">
+                  U
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-[#0d1b2a]">Il tuo Profilo</h2>
+                  <p className="text-xs font-medium text-slate-500">Zena &amp; Go • Genova</p>
+                </div>
               </div>
-
-              <div className="grid grid-cols-5 gap-2">
-                {immagini.map((img, index) => (
-                  <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-xs">
-                    <img src={img} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => rimuoviFoto(index)}
-                      className="absolute top-1 right-1 bg-black/75 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-
-                {immagini.length < 10 && (
-                  <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 rounded-xl cursor-pointer transition">
-                    <span className="text-xl">📷</span>
-                    <span className="text-[10px] font-semibold text-slate-500 mt-0.5">Aggiungi</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={gestisciFotoMultiple}
-                      className="hidden"
-                    />
-                  </label>
-                )}
+              <div className="pt-4 space-y-2 text-xs text-slate-600">
+                <p>
+                  Pubblica e scambia oggetti di seconda mano nel tuo quartiere a Genova senza commissioni o spedizioni.
+                </p>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-800 mb-1">
-                Cosa vuoi vendere o regalare? *
-              </label>
-              <input
-                type="text"
-                required
-                style={inputStyle}
-                value={titolo}
-                onChange={(e) => setTitolo(e.target.value)}
-                placeholder="es. Libro universitario, Bici da passeggio, Sedia..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-800 mb-1">
-                  Prezzo (€) *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  required
-                  style={inputStyle}
-                  value={prezzo}
-                  onChange={(e) => setPrezzo(e.target.value)}
-                  placeholder="0 se in regalo"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-800 mb-1">
-                  Quartiere / Zona *
-                </label>
-                <select
-                  value={quartiere}
-                  style={inputStyle}
-                  onChange={(e) => setQuartiere(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                >
-                  {QUARTIERI_GENOVA.map((q) => (
-                    <option key={q} value={q} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
-                      {q}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-800 mb-1">
-                Punto d&apos;incontro suggerito
-              </label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={luogoRitiro}
-                onChange={(e) => setLuogoRitiro(e.target.value)}
-                placeholder="es. Piazza De Ferrari, Stazione Brignole, via XX Settembre..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-800 mb-1">
-                Descrizione dell&apos;oggetto
-              </label>
-              <textarea
-                rows={3}
-                style={inputStyle}
-                value={descrizione}
-                onChange={(e) => setDescrizione(e.target.value)}
-                placeholder="Indica condizioni d'uso, difetti o dettagli utili..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-800 mb-1">
-                Recapito per contatto (WhatsApp o Telegram) *
-              </label>
-              <input
-                type="text"
-                required
-                style={inputStyle}
-                value={contatto}
-                onChange={(e) => setContatto(e.target.value)}
-                placeholder="es. Numero WhatsApp o username Telegram"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={caricamento}
-              className="w-full bg-emerald-600 disabled:opacity-50 text-white font-medium py-3 rounded-xl hover:bg-emerald-700 transition shadow-sm"
-            >
-              {caricamento ? 'Pubblicazione in corso...' : 'Pubblica Annuncio a Genova'}
-            </button>
-          </form>
+          </div>
         )}
       </div>
-    </div>
+
+      {/* Modal di Segnalazione */}
+      {annuncioDaSegnalare !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200">
+            <h3 className="font-bold text-slate-900 text-base mb-1">Segnala annuncio non idoneo</h3>
+            <p className="text-xs text-slate-500 mb-3">
+              Indica perché questo annuncio è pericoloso o non rispetta le regole di Zena &amp; Go.
+            </p>
+            <textarea
+              rows={3}
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="es. Oggetto illegale, foto offensiva, truffa..."
+              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg text-slate-900 mb-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setAnnuncioDaSegnalare(null); setMotivo(""); }}
+                className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                onClick={() => inviaSegnalazione(annuncioDaSegnalare)}
+                className="px-3.5 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+              >
+                Invia segnalazione
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigazione inferiore */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-2 z-20 flex justify-around max-w-md mx-auto shadow-md">
+        <button
+          type="button"
+          onClick={() => setSezioneAttiva("marketplace")}
+          className={`flex flex-col items-center gap-1 transition ${
+            sezioneAttiva === "marketplace" ? "text-[#0d1b2a] font-bold" : "text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+          <span className="text-[10px] uppercase tracking-wider">Mercatino</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSezioneAttiva("profilo")}
+          className={`flex flex-col items-center gap-1 transition ${
+            sezioneAttiva === "profilo" ? "text-[#0d1b2a] font-bold" : "text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span className="text-[10px] uppercase tracking-wider">Account</span>
+        </button>
+      </nav>
+    </main>
   );
 }
