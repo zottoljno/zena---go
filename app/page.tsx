@@ -28,6 +28,7 @@ interface Annuncio {
   descrizione?: string;
   contatto: string;
   immagini?: string[];
+  stato?: string;
 }
 
 export default function Home() {
@@ -37,13 +38,14 @@ export default function Home() {
   const [cerca, setCerca] = useState("");
   const [sezioneAttiva, setSezioneAttiva] = useState<"marketplace" | "profilo">("marketplace");
 
-  // Recupera gli annunci veri dal database Supabase
+  // Recupera solo gli annunci approvati da Supabase
   const caricaAnnunci = async () => {
     try {
       setCaricamento(true);
       const { data, error } = await supabase
         .from("annunci")
         .select("*")
+        .or("stato.eq.approvato,stato.is.null")
         .order("created_at", { ascending: false });
 
       if (error) {
