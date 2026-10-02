@@ -18,6 +18,15 @@ const QUARTIERI_GENOVA = [
   'Pontedecimo / Bolzaneto / Val Polcevera',
 ];
 
+// Lista di blocco per proteggere la piattaforma su beni vietati o illeciti
+const PAROLE_VIETATE = [
+  'arma', 'armi', 'pistola', 'fucile', 'coltello', 'munizioni',
+  'droga', 'erba', 'fumo', 'cocaina', 'hashish', 'marijuana', 'cannabis', 'thc', 'cbd',
+  'farmaco', 'medicinale', 'ricetta', 'ansiolitico', 'psicofarmaco', 'viagra',
+  'replica', 'contraffatto', 'falso rolex', 'pezzotto', 'iptv',
+  'prestito', 'investimento', 'bonifico immediato', 'crypto'
+];
+
 export default function PubblicaAnnuncio() {
   const [titolo, setTitolo] = useState('');
   const [prezzo, setPrezzo] = useState('');
@@ -64,6 +73,19 @@ export default function PubblicaAnnuncio() {
     setCaricamento(true);
     setErrore('');
 
+    // Controllo parole vietate automatico
+    const testoCompleto = `${titolo} ${descrizione}`.toLowerCase();
+    const parolaTrovata = PAROLE_VIETATE.find((parola) => {
+      const regex = new RegExp(`\\b${parola}\\b`, 'i');
+      return regex.test(testoCompleto);
+    });
+
+    if (parolaTrovata) {
+      setCaricamento(false);
+      setErrore(`L'annuncio non può essere pubblicato perché contiene riferimenti a contenuti o beni non ammessi ("${parolaTrovata}").`);
+      return;
+    }
+
     try {
       const { error } = await supabase.from('annunci').insert([
         {
@@ -74,7 +96,8 @@ export default function PubblicaAnnuncio() {
           descrizione,
           contatto,
           immagini,
-          stato: 'approvato', // Subito approvato e visibile a tutti
+          stato: 'approvato',
+          segnalato: false,
         },
       ]);
 
@@ -98,13 +121,13 @@ export default function PubblicaAnnuncio() {
             ← Torna alla bacheca
           </Link>
           <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 rounded-full border border-emerald-200">
-            Zena & Go
+            Zena &amp; Go
           </span>
         </div>
 
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Pubblica un annuncio</h1>
         <p className="text-sm text-slate-600 mb-6">
-          Vendi o cedi a mano nel tuo quartiere a Genova. Niente spedizioni, solo scambio di persona.
+          Vendi o cedi a mano nel tuo quartiere a Genova. Solo scambi di persona e beni leciti.
         </p>
 
         {errore && (
@@ -115,9 +138,9 @@ export default function PubblicaAnnuncio() {
 
         {inviato ? (
           <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-            <h2 className="text-lg font-semibold text-emerald-900 mb-1">Annuncio pubblicato subito!</h2>
+            <h2 className="text-lg font-semibold text-emerald-900 mb-1">Annuncio pubblicato!</h2>
             <p className="text-sm text-emerald-700 mb-4">
-              L&apos;annuncio per &quot;{titolo}&quot; è già online e visibile a tutta Genova.
+              L&apos;annuncio per &quot;{titolo}&quot; è subito visibile in bacheca.
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -139,7 +162,7 @@ export default function PubblicaAnnuncio() {
                 href="/"
                 className="inline-block bg-emerald-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition"
               >
-                Vai a vederlo in Home
+                Vai alla home
               </Link>
             </div>
           </div>
