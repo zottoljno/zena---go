@@ -223,6 +223,7 @@ function ChatContent() {
   const inviaSegnalazione = async () => {
     if (!conversazioneAttiva || !idControparte) return;
 
+    // 1. Database Supabase
     try {
       await supabase.from('segnalazioni').insert({
         segnalatore_id: mioId,
@@ -232,7 +233,23 @@ function ChatContent() {
         dettagli: dettaglioSegnalazione,
       });
     } catch {
-      // Ignora se la tabella opzionale non esiste ancora
+      // Ignora se la tabella non è ancora presente
+    }
+
+    // 2. Notifica istantanea Telegram
+    try {
+      await fetch('/api/segnala', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          motivo: motivoSegnalazione,
+          dettagli: dettaglioSegnalazione,
+          nicknameSegnalato: nicknameControparte,
+          conversazioneId: conversazioneAttiva.id,
+        }),
+      });
+    } catch (err) {
+      console.error('Errore invio notifica Telegram:', err);
     }
 
     setSegnalazioneInviata(true);
@@ -245,20 +262,21 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
+      <header className="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20 shadow-xs">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1">
+          <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-blue-900 flex items-center gap-1">
             ← Bacheca Zena &amp; Go
           </Link>
           <span className="font-extrabold text-slate-900 text-sm">Messaggi &amp; Trattative</span>
-          <Link href="/profilo" className="text-xs text-slate-500 hover:text-slate-800">
+          <Link href="/profilo" className="text-xs text-slate-500 hover:text-slate-800 font-medium">
             Profilo
           </Link>
         </div>
       </header>
 
       <main className="max-w-6xl w-full mx-auto p-3 sm:p-6 flex-1 flex flex-col md:flex-row gap-4 h-[calc(100vh-64px)]">
+        {/* Lista conversazioni */}
         <aside className="w-full md:w-80 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden shrink-0">
           <div className="p-3.5 border-b border-slate-100 bg-slate-50">
             <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Le tue conversazioni</h2>
@@ -284,7 +302,7 @@ function ChatContent() {
                     onClick={() => setConversazioneAttiva(c)}
                     className={
                       isSelected
-                        ? 'w-full text-left p-3.5 flex items-center gap-3 transition bg-emerald-50 border-l-4 border-emerald-600'
+                        ? 'w-full text-left p-3.5 flex items-center gap-3 transition bg-blue-50/80 border-l-4 border-blue-800'
                         : 'w-full text-left p-3.5 flex items-center gap-3 transition hover:bg-slate-50'
                     }
                   >
@@ -311,25 +329,27 @@ function ChatContent() {
           </div>
         </aside>
 
+        {/* Finestra chat attiva */}
         <section className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden relative">
           {conversazioneAttiva ? (
             <>
+              {/* Header chat attiva */}
               <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-white z-10">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0 shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-blue-800 text-white font-black flex items-center justify-center text-sm shrink-0 shadow-xs">
                     {nicknameControparte.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h3 className="font-extrabold text-sm text-slate-900 truncate">{nicknameControparte}</h3>
-                      <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
+                      <span className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
                         {conversazioneAttiva.venditore_id === mioId ? 'Acquirente' : 'Venditore'}
                       </span>
                     </div>
                     {conversazioneAttiva.annuncio_id && (
                       <Link
                         href={`/annuncio/${conversazioneAttiva.annuncio_id}`}
-                        className="text-[11px] text-emerald-700 hover:underline truncate block"
+                        className="text-[11px] text-blue-800 hover:underline truncate block font-medium"
                       >
                         Annuncio: <strong>{conversazioneAttiva.annunci?.titolo || 'Dettagli'}</strong> (
                         {conversazioneAttiva.annunci?.quartiere})
@@ -365,7 +385,7 @@ function ChatContent() {
                         <button
                           type="button"
                           onClick={sbloccaUtente}
-                          className="w-full text-left px-3 py-2 text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 font-semibold"
+                          className="w-full text-left px-3 py-2 text-blue-700 hover:bg-blue-50 flex items-center gap-2 font-semibold"
                         >
                           <span>🔓</span> Sblocca utente
                         </button>
@@ -383,14 +403,16 @@ function ChatContent() {
                 </div>
               </div>
 
-              <div className="bg-amber-50 border-b border-amber-200 px-3 py-1.5 text-[11px] text-amber-900 flex items-center justify-between">
-                <span>🛡️ <strong>Regola di Zena:</strong> scambio sempre di persona in un luogo pubblico del quartiere.</span>
+              {/* Regola di Zena */}
+              <div className="bg-amber-50/80 border-b border-amber-200/80 px-3 py-1.5 text-[11px] text-amber-900 flex items-center justify-between">
+                <span>🛡️ <strong>Regola di Zena:</strong> incontro sempre di persona in un luogo pubblico del quartiere.</span>
               </div>
 
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50">
+              {/* Messaggi */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/60">
                 {messaggi.length === 0 ? (
                   <div className="text-center py-12 text-slate-400 text-xs">
-                    Inizia la conversazione! Accordati per orario e punto di incontro a Genova.
+                    Inizia la conversazione! Accordati su data, ora e punto di incontro a Genova.
                   </div>
                 ) : (
                   messaggi.map((m) => {
@@ -403,7 +425,7 @@ function ChatContent() {
                         <div
                           className={
                             isMio
-                              ? 'max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed shadow-xs bg-emerald-600 text-white'
+                              ? 'max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed shadow-xs bg-blue-800 text-white'
                               : 'max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed shadow-xs bg-white text-slate-800 border border-slate-200'
                           }
                         >
@@ -411,7 +433,7 @@ function ChatContent() {
                           <span
                             className={
                               isMio
-                                ? 'block text-[9px] mt-1 text-right text-emerald-100'
+                                ? 'block text-[9px] mt-1 text-right text-blue-100'
                                 : 'block text-[9px] mt-1 text-right text-slate-400'
                             }
                           >
@@ -425,6 +447,7 @@ function ChatContent() {
                 <div ref={fineMessaggiRef} />
               </div>
 
+              {/* Input invio o blocco */}
               {utenteAttualeBloccato ? (
                 <div className="p-3 bg-red-50 border-t border-red-200 text-center text-xs text-red-700 flex items-center justify-center gap-2">
                   <span>🚫 Hai bloccato {nicknameControparte}.</span>
@@ -439,12 +462,12 @@ function ChatContent() {
                     value={nuovoTesto}
                     onChange={(e) => setNuovoTesto(e.target.value)}
                     placeholder={`Scrivi un messaggio a ${nicknameControparte}...`}
-                    className="flex-1 text-xs sm:text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900"
+                    className="flex-1 text-xs sm:text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-800 text-slate-900"
                   />
                   <button
                     type="submit"
                     disabled={!nuovoTesto.trim()}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-40"
+                    className="bg-blue-800 hover:bg-blue-900 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-40"
                   >
                     Invia
                   </button>
@@ -459,6 +482,7 @@ function ChatContent() {
         </section>
       </main>
 
+      {/* Modal Segnalazione */}
       {modalSegnalaAperto && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
@@ -474,7 +498,7 @@ function ChatContent() {
             </div>
 
             {segnalazioneInviata ? (
-              <div className="p-4 bg-emerald-50 text-emerald-800 text-xs rounded-xl font-medium text-center">
+              <div className="p-4 bg-blue-50 text-blue-900 text-xs rounded-xl font-medium text-center border border-blue-200">
                 ✓ Segnalazione inviata ai moderatori di Zena &amp; Go. Grazie per il contributo alla sicurezza!
               </div>
             ) : (
@@ -488,7 +512,7 @@ function ChatContent() {
                   <select
                     value={motivoSegnalazione}
                     onChange={(e) => setMotivoSegnalazione(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full text-xs border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-800"
                   >
                     <option value="Comportamento scorretto">Comportamento scorretto o offensivo</option>
                     <option value="Tentativo di truffa o pagamento sospetto">Tentativo di truffa o pagamento sospetto</option>
@@ -505,7 +529,7 @@ function ChatContent() {
                     value={dettaglioSegnalazione}
                     onChange={(e) => setDettaglioSegnalazione(e.target.value)}
                     placeholder="Descrivi brevemente cosa è successo..."
-                    className="w-full text-xs border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full text-xs border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-800"
                   />
                 </div>
 
