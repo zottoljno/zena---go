@@ -1,389 +1,245 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-
-const QUARTIERI = [
-  "Centro Storico",
-  "Carignano / Foce",
-  "Albaro / San Martino",
-  "Castelletto / Manin",
-  "San Fruttuoso / Marassi",
-  "Staglieno / Val Bisagno",
-  "Sampierdarena / San Teodoro",
-  "Cornigliano / Sestri Ponente",
-  "Pegli / Pra' / Voltri",
-  "Quarto / Quinto / Nervi",
-  "Pontedecimo / Bolzaneto / Val Polcevera",
-];
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface Annuncio {
   id: number;
-  created_at: string;
   titolo: string;
   prezzo: number;
   quartiere: string;
   luogo_ritiro?: string;
   descrizione?: string;
-  contatto: string;
+  contatto?: string;
   immagini?: string[];
-  stato?: string;
-  segnalato?: boolean;
+  created_at?: string;
+  user_id?: string;
 }
+
+const QUARTIERI_GENOVA = [
+  'Tutti i quartieri',
+  'Centro Storico',
+  'Carignano / Foce',
+  'Albaro / San Martino',
+  'Castelletto / Manin',
+  'San Fruttuoso / Marassi',
+  'Staglieno / Val Bisagno',
+  'Sampierdarena / San Teodoro',
+  'Cornigliano / Sestri Ponente',
+  'Pegli / Pra\' / Voltri',
+  'Quarto / Quinto / Nervi',
+  'Pontedecimo / Bolzaneto / Val Polcevera',
+];
 
 export default function Home() {
   const [annunci, setAnnunci] = useState<Annuncio[]>([]);
   const [caricamento, setCaricamento] = useState(true);
-  const [quartiereSelezionato, setQuartiereSelezionato] = useState("Tutti i quartieri");
-  const [cerca, setCerca] = useState("");
-  const [sezioneAttiva, setSezioneAttiva] = useState<"marketplace" | "profilo">("marketplace");
-  const [annuncioDaSegnalare, setAnnuncioDaSegnalare] = useState<number | null>(null);
-  const [motivo, setMotivo] = useState("");
-
-  const caricaAnnunci = async () => {
-    try {
-      setCaricamento(true);
-      const { data, error } = await supabase
-        .from("annunci")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Errore nel recupero annunci:", error);
-      } else if (data) {
-        setAnnunci(data as Annuncio[]);
-      }
-    } catch (err) {
-      console.error("Errore di rete:", err);
-    } finally {
-      setCaricamento(false);
-    }
-  };
+  const [filtroQuartiere, setFiltroQuartiere] = useState('Tutti i quartieri');
+  const [ricerca, setRicerca] = useState('');
+  const [soloRegalo, setSoloRegalo] = useState(false);
 
   useEffect(() => {
     caricaAnnunci();
   }, []);
 
-  const inviaSegnalazione = async (id: number) => {
-    if (!motivo.trim()) {
-      alert("Specifica brevemente il motivo.");
-      return;
-    }
+  const caricaAnnunci = async () => {
+    setCaricamento(true);
+    try {
+      const { data, error } = await supabase
+        .from('annunci')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    const { error } = await supabase
-      .from("annunci")
-      .update({ segnalato: true, motivo_segnalazione: motivo })
-      .eq("id", id);
-
-    if (!error) {
-      alert("Grazie! L'annuncio è stato segnalato al moderatore per la rimozione.");
-      setAnnuncioDaSegnalare(null);
-      setMotivo("");
-    } else {
-      alert("Errore durante l'invio della segnalazione: " + error.message);
+      if (error) {
+        console.error('Errore nel recupero annunci:', error);
+      } else if (data) {
+        setAnnunci(data as Annuncio[]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCaricamento(false);
     }
   };
 
-  const annunciFiltrati = annunci.filter((annuncio) => {
-    const corrispondeQuartiere =
-      quartiereSelezionato === "Tutti i quartieri" ||
-      annuncio.quartiere === quartiereSelezionato;
-    const corrispondeTesto =
-      annuncio.titolo.toLowerCase().includes(cerca.toLowerCase()) ||
-      (annuncio.descrizione && annuncio.descrizione.toLowerCase().includes(cerca.toLowerCase()));
-    return corrispondeQuartiere && corrispondeTesto;
+  const annunciFiltrati = annunci.filter((a) => {
+    const matchQuartiere =
+      filtroQuartiere === 'Tutti i quartieri' || a.quartiere === filtroQuartiere;
+    const matchRicerca =
+      !ricerca.trim() ||
+      a.titolo.toLowerCase().includes(ricerca.toLowerCase()) ||
+      (a.descrizione && a.descrizione.toLowerCase().includes(ricerca.toLowerCase()));
+    const matchRegalo = !soloRegalo || a.prezzo === 0;
+
+    return matchQuartiere && matchRicerca && matchRegalo;
   });
 
   return (
-    <main className="min-h-screen bg-[#f3f6fb] text-[#0d1b2a] pb-28">
-      {/* Testata Navy */}
-      <header className="sticky top-0 z-30 bg-[#0d1b2a] text-white border-b border-[#1b263b] px-4 py-3.5 shadow-md">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-2xl font-black tracking-tight leading-none text-white">
-              Zena &amp; Go
-            </span>
-            <span className="text-[10px] text-slate-300 font-semibold tracking-wider uppercase mt-1">
-              Zero spedizioni • Solo a Genova
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-black text-emerald-600 tracking-tight">Zena &amp; Go</span>
+            <span className="hidden sm:inline-block text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+              Genova
             </span>
           </div>
 
-          <Link
-            href="/pubblica"
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-3.5 py-2 rounded-xl shadow-sm transition active:scale-95 uppercase tracking-wider inline-block"
-          >
-            + Vendi gratis
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/chat"
+              className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2 rounded-xl transition border border-slate-200"
+            >
+              <span>💬</span>
+              <span>Messaggi</span>
+            </Link>
+
+            <Link
+              href="/pubblica"
+              className="flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition shadow-xs"
+            >
+              <span>+</span>
+              <span>Pubblica</span>
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* Contenuto Principale */}
-      <div className="max-w-md mx-auto px-4 pt-4">
-        {sezioneAttiva === "marketplace" ? (
-          <div className="space-y-4">
-            <div>
-              <input
-                type="text"
-                placeholder="Cosa cerchi a Genova? (es. libro, bici...)"
-                value={cerca}
-                onChange={(e) => setCerca(e.target.value)}
-                style={{ color: "#0f172a", backgroundColor: "#ffffff" }}
-                className="w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0d1b2a] shadow-xs font-medium placeholder:text-slate-400"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Quartiere di scambio
-                </p>
-                <span className="text-[11px] text-slate-400 font-medium">Genova</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {["Tutti i quartieri", ...QUARTIERI].map((q) => {
-                  const attivo = quartiereSelezionato === q;
-                  return (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => setQuartiereSelezionato(q)}
-                      className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition ${
-                        attivo
-                          ? "bg-[#0d1b2a] text-white shadow-xs"
-                          : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      {q}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="bg-[#e8edf5] border border-[#cbd5e1] rounded-2xl p-3.5">
-              <h4 className="text-xs font-black uppercase tracking-wider text-[#0d1b2a]">
-                Zero spedizioni • Scambio a mano
-              </h4>
-              <p className="text-xs text-slate-700 font-normal leading-relaxed mt-1">
-                Contatta chi vende via WhatsApp per stabilire un punto d&apos;incontro sicuro nel quartiere.
-              </p>
-            </div>
-
-            {/* Lista Annunci */}
-            <div className="space-y-3.5 pt-1">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-black uppercase tracking-wider text-slate-700">
-                  Disponibili adesso ({annunciFiltrati.length})
-                </h2>
-                <button
-                  type="button"
-                  onClick={caricaAnnunci}
-                  className="text-[11px] font-medium text-emerald-600 hover:underline"
-                >
-                  Aggiorna lista ↻
-                </button>
-              </div>
-
-              {caricamento ? (
-                <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-slate-500 text-sm">
-                  Caricamento annunci in corso...
-                </div>
-              ) : annunciFiltrati.length === 0 ? (
-                <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center">
-                  <p className="text-sm font-medium text-slate-500">
-                    Nessun annuncio trovato in questo quartiere.
-                  </p>
-                  <Link
-                    href="/pubblica"
-                    className="mt-3 inline-block text-xs font-bold text-emerald-600 hover:underline"
-                  >
-                    Sii il primo a pubblicarne uno!
-                  </Link>
-                </div>
-              ) : (
-                annunciFiltrati.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs space-y-2.5 hover:border-slate-300 transition"
-                  >
-                    <div className="flex gap-3">
-                      <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
-                        {item.immagini && item.immagini.length > 0 ? (
-                          <img
-                            src={item.immagini[0]}
-                            alt={item.titolo}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs font-semibold">
-                            📷
-                          </div>
-                        )}
-
-                        {item.immagini && item.immagini.length > 1 && (
-                          <span className="absolute bottom-1 right-1 bg-black/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
-                            +{item.immagini.length - 1}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0 flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-start justify-between gap-1">
-                            <h3 className="text-sm font-bold text-[#0d1b2a] truncate leading-snug">
-                              {item.titolo}
-                            </h3>
-                            <span className="text-base font-black text-[#0d1b2a] whitespace-nowrap">
-                              {item.prezzo === 0 ? "In regalo" : `${item.prezzo} €`}
-                            </span>
-                          </div>
-                          <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-                            📍 {item.quartiere}
-                            {item.luogo_ritiro ? ` • Ritiro: ${item.luogo_ritiro}` : ""}
-                          </p>
-                          {item.descrizione && (
-                            <p className="text-[11px] text-slate-600 line-clamp-1 mt-0.5">
-                              {item.descrizione}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          <span className="text-[10px] font-semibold text-slate-400">
-                            {new Date(item.created_at).toLocaleDateString("it-IT", {
-                              day: "numeric",
-                              month: "short",
-                            })}
-                          </span>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setAnnuncioDaSegnalare(item.id)}
-                              className="text-[10px] text-slate-400 hover:text-red-600 transition"
-                              title="Segnala annuncio"
-                            >
-                              Segnala ⚠️
-                            </button>
-
-                            {item.contatto && (
-                              <a
-                                href={`https://wa.me/39${item.contatto.replace(/\D/g, "")}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xs transition"
-                              >
-                                WhatsApp
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {item.immagini && item.immagini.length > 1 && (
-                      <div className="flex gap-2 overflow-x-auto pt-1 pb-0.5 scrollbar-none">
-                        {item.immagini.map((foto, idx) => (
-                          <img
-                            key={idx}
-                            src={foto}
-                            alt=""
-                            className="w-12 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-              <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
-                <div className="w-12 h-12 rounded-full bg-[#0d1b2a] text-white flex items-center justify-center text-lg font-black tracking-tight">
-                  U
-                </div>
-                <div>
-                  <h2 className="text-base font-black text-[#0d1b2a]">Il tuo Profilo</h2>
-                  <p className="text-xs font-medium text-slate-500">Zena &amp; Go • Genova</p>
-                </div>
-              </div>
-              <div className="pt-4 space-y-2 text-xs text-slate-600">
-                <p>
-                  Pubblica e scambia oggetti di seconda mano nel tuo quartiere a Genova senza commissioni o spedizioni.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Modal di Segnalazione */}
-      {annuncioDaSegnalare !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200">
-            <h3 className="font-bold text-slate-900 text-base mb-1">Segnala annuncio non idoneo</h3>
-            <p className="text-xs text-slate-500 mb-3">
-              Indica perché questo annuncio è pericoloso o non rispetta le regole di Zena &amp; Go.
+      {/* Hero & Filtri */}
+      <section className="bg-white border-b border-slate-200 py-6 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              Scambia, regala e fai affari nel tuo quartiere a Genova
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Solo compravendite a mano, senza spedizioni e senza dover dare il tuo numero privato.
             </p>
-            <textarea
-              rows={3}
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="es. Oggetto illegale, foto offensiva, truffa..."
-              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg text-slate-900 mb-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+          </div>
+
+          {/* Barra di ricerca e selezione quartiere */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+            <input
+              type="text"
+              placeholder="Cosa stai cercando? (es. libri, fotocamera, giacca...)"
+              value={ricerca}
+              onChange={(e) => setRicerca(e.target.value)}
+              style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
+              className="sm:col-span-2 text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => { setAnnuncioDaSegnalare(null); setMotivo(""); }}
-                className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                onClick={() => inviaSegnalazione(annuncioDaSegnalare)}
-                className="px-3.5 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
-              >
-                Invia segnalazione
-              </button>
-            </div>
+
+            <select
+              value={filtroQuartiere}
+              onChange={(e) => setFiltroQuartiere(e.target.value)}
+              style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
+              className="text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {QUARTIERI_GENOVA.map((q) => (
+                <option key={q} value={q} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
+                  {q}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Toggle Solo in Regalo */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setSoloRegalo(!soloRegalo)}
+              className={`text-xs px-3 py-1.5 rounded-full font-semibold border transition flex items-center gap-1.5 ${
+                soloRegalo
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              <span>🎁</span>
+              <span>Solo oggetti in regalo</span>
+            </button>
+            <span className="text-xs text-slate-400">
+              ({annunciFiltrati.length} annunci trovati)
+            </span>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Navigazione inferiore */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-2 z-20 flex justify-around max-w-md mx-auto shadow-md">
-        <button
-          type="button"
-          onClick={() => setSezioneAttiva("marketplace")}
-          className={`flex flex-col items-center gap-1 transition ${
-            sezioneAttiva === "marketplace" ? "text-[#0d1b2a] font-bold" : "text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
-          <span className="text-[10px] uppercase tracking-wider">Mercatino</span>
-        </button>
+      {/* Griglia Annunci */}
+      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
+        {caricamento ? (
+          <div className="text-center py-16 text-slate-400 text-sm">Caricamento annunci in corso...</div>
+        ) : annunciFiltrati.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8">
+            <p className="text-3xl mb-2">🔍</p>
+            <h3 className="font-bold text-slate-900 text-base mb-1">Nessun annuncio trovato</h3>
+            <p className="text-xs text-slate-500 mb-4">Prova a cambiare quartiere o a pubblicarne uno tu!</p>
+            <Link
+              href="/pubblica"
+              className="inline-block bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition"
+            >
+              Pubblica un annuncio
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {annunciFiltrati.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between"
+              >
+                <div>
+                  {/* Foto Annuncio */}
+                  <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
+                    {item.immagini && item.immagini.length > 0 ? (
+                      <img
+                        src={item.immagini[0]}
+                        alt={item.titolo}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
+                        <span className="text-2xl mb-1">📦</span>
+                        Nessuna foto
+                      </div>
+                    )}
+                    <span className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
+                      {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
+                    </span>
+                  </div>
 
-        <button
-          type="button"
-          onClick={() => setSezioneAttiva("profilo")}
-          className={`flex flex-col items-center gap-1 transition ${
-            sezioneAttiva === "profilo" ? "text-[#0d1b2a] font-bold" : "text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          <span className="text-[10px] uppercase tracking-wider">Account</span>
-        </button>
-      </nav>
-    </main>
+                  {/* Dettagli */}
+                  <div className="p-3.5">
+                    <h2 className="font-bold text-slate-900 text-sm line-clamp-1 mb-1">
+                      {item.titolo}
+                    </h2>
+                    <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
+                      <span>📍</span>
+                      <span className="truncate">{item.quartiere}</span>
+                    </p>
+                    {item.descrizione && (
+                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                        {item.descrizione}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pulsante Contatta in Chat */}
+                <div className="p-3.5 pt-0">
+                  <Link
+                    href={`/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`}
+                    className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs py-2 rounded-xl transition flex items-center justify-center gap-1.5"
+                  >
+                    <span>💬</span>
+                    <span>Contatta in chat</span>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
