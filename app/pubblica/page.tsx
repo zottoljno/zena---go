@@ -81,7 +81,6 @@ export default function PubblicaAnnuncio() {
     setCaricamento(true);
     setErrore('');
 
-    // Filtro parole vietate
     const testoCompleto = `${titolo} ${descrizione}`.toLowerCase();
     const parolaTrovata = PAROLE_VIETATE.find((parola) => {
       const regex = new RegExp(`\\b${parola}\\b`, 'i');
@@ -110,3 +109,55 @@ export default function PubblicaAnnuncio() {
             user_id: userId,
           },
         ])
+        .select();
+
+      if (error) throw error;
+
+      if (data && data[0]) {
+        fetch('/api/notifica', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: data[0].id,
+            titolo,
+            prezzo,
+            quartiere,
+            contatto: 'Chat interna Zena & Go',
+          }),
+        }).catch((err) => console.error('Errore notifica Telegram:', err));
+      }
+
+      setInviato(true);
+    } catch (err: any) {
+      setErrore(err.message || 'Errore durante la pubblicazione.');
+    } finally {
+      setCaricamento(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6">
+      <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div className="flex items-center justify-between mb-6">
+          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+            ← Torna alla bacheca
+          </Link>
+          <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 rounded-full border border-emerald-200">
+            Zena &amp; Go
+          </span>
+        </div>
+
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Pubblica un annuncio</h1>
+        <p className="text-sm text-slate-600 mb-6">
+          Scambia a mano nel tuo quartiere a Genova con chat protetta.
+        </p>
+
+        {errore && (
+          <div className="mb-5 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">
+            {errore}
+          </div>
+        )}
+
+        {inviato ? (
+          <div className="p-6 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
+            <h2 className
