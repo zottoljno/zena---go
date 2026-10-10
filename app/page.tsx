@@ -122,9 +122,13 @@ export default function Home() {
           <div className="flex items-center gap-2.5">
             {sessioneUtente ? (
               <>
-                <span className="text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-xl">
-                  👤 {nickname}
-                </span>
+                <Link
+  href="/profilo"
+  className="text-xs font-semibold text-slate-700 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-200 px-2.5 py-1.5 rounded-xl transition flex items-center gap-1"
+>
+  <span>👤</span>
+  <span>{nickname}</span>
+</Link>
 
                 <button
                   onClick={() => handleAzioneProtetta('/chat')}
