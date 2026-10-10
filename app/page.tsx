@@ -11,7 +11,6 @@ interface Annuncio {
   quartiere: string;
   luogo_ritiro?: string;
   descrizione?: string;
-  contatto?: string;
   immagini?: string[];
   created_at?: string;
   user_id?: string;
@@ -93,7 +92,7 @@ export default function Home() {
               className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2 rounded-xl transition border border-slate-200"
             >
               <span>💬</span>
-              <span>Messaggi</span>
+              <span>I Miei Messaggi</span>
             </Link>
 
             <Link
@@ -115,11 +114,10 @@ export default function Home() {
               Scambia, regala e fai affari nel tuo quartiere a Genova
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Solo compravendite a mano, senza spedizioni e senza dover dare il tuo numero privato.
+              Chatta direttamente sul sito senza condividere il tuo numero di telefono privato.
             </p>
           </div>
 
-          {/* Barra di ricerca e selezione quartiere */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
             <input
               type="text"
@@ -134,112 +132,4 @@ export default function Home() {
               value={filtroQuartiere}
               onChange={(e) => setFiltroQuartiere(e.target.value)}
               style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-              className="text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {QUARTIERI_GENOVA.map((q) => (
-                <option key={q} value={q} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
-                  {q}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Toggle Solo in Regalo */}
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setSoloRegalo(!soloRegalo)}
-              className={`text-xs px-3 py-1.5 rounded-full font-semibold border transition flex items-center gap-1.5 ${
-                soloRegalo
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'
-              }`}
-            >
-              <span>🎁</span>
-              <span>Solo oggetti in regalo</span>
-            </button>
-            <span className="text-xs text-slate-400">
-              ({annunciFiltrati.length} annunci trovati)
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Griglia Annunci */}
-      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
-        {caricamento ? (
-          <div className="text-center py-16 text-slate-400 text-sm">Caricamento annunci in corso...</div>
-        ) : annunciFiltrati.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8">
-            <p className="text-3xl mb-2">🔍</p>
-            <h3 className="font-bold text-slate-900 text-base mb-1">Nessun annuncio trovato</h3>
-            <p className="text-xs text-slate-500 mb-4">Prova a cambiare quartiere o a pubblicarne uno tu!</p>
-            <Link
-              href="/pubblica"
-              className="inline-block bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition"
-            >
-              Pubblica un annuncio
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {annunciFiltrati.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between"
-              >
-                <div>
-                  {/* Foto Annuncio */}
-                  <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
-                    {item.immagini && item.immagini.length > 0 ? (
-                      <img
-                        src={item.immagini[0]}
-                        alt={item.titolo}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
-                        <span className="text-2xl mb-1">📦</span>
-                        Nessuna foto
-                      </div>
-                    )}
-                    <span className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
-                      {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
-                    </span>
-                  </div>
-
-                  {/* Dettagli */}
-                  <div className="p-3.5">
-                    <h2 className="font-bold text-slate-900 text-sm line-clamp-1 mb-1">
-                      {item.titolo}
-                    </h2>
-                    <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
-                      <span>📍</span>
-                      <span className="truncate">{item.quartiere}</span>
-                    </p>
-                    {item.descrizione && (
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                        {item.descrizione}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Pulsante Contatta in Chat */}
-                <div className="p-3.5 pt-0">
-                  <Link
-                    href={`/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`}
-                    className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs py-2 rounded-xl transition flex items-center justify-center gap-1.5"
-                  >
-                    <span>💬</span>
-                    <span>Contatta in chat</span>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
+              className="text-xs border border-slate-300 rounded-xl px-
