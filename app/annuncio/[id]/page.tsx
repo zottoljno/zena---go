@@ -37,13 +37,11 @@ export default function DettaglioAnnuncioPage({
     const caricaDati = async () => {
       setCaricamento(true);
 
-      // Controlla utente corrente
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setMioId(session.user.id);
       }
 
-      // Recupera annuncio
       const { data, error } = await supabase
         .from('annunci')
         .select('*')
@@ -57,7 +55,6 @@ export default function DettaglioAnnuncioPage({
 
       setAnnuncio(data as Annuncio);
 
-      // Cerca il nickname del venditore se disponibile
       if (data.user_id) {
         const { data: profileData } = await supabase
           .from('profili')
@@ -85,13 +82,11 @@ export default function DettaglioAnnuncioPage({
 
     if (!annuncio) return;
 
-    // Se l'annuncio è dell'utente stesso, manda al profilo
     if (annuncio.user_id === session.user.id) {
       router.push('/profilo');
       return;
     }
 
-    // Cerca o crea la conversazione
     const { data: esistente } = await supabase
       .from('conversazioni')
       .select('id')
@@ -120,17 +115,27 @@ export default function DettaglioAnnuncioPage({
     }
   };
 
-  const condividi = () => {
-    if (navigator.clipboard) {
+  const condividiLink = () => {
+    if (typeof window !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
       setCopiato(true);
-      setTimeout(() => setCopiato(false), 2500);
+      setTimeout(() => setCopiato(false), 2200);
     }
+  };
+
+  const condividiSuWhatsApp = () => {
+    if (!annuncio) return;
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const prezzoTesto = annuncio.prezzo === 0 ? 'Gratis' : `${annuncio.prezzo} €`;
+    const messaggio = encodeURIComponent(
+      `Guarda questo annuncio su Zena & Go: "${annuncio.titolo}" (${prezzoTesto}) a Genova (${annuncio.quartiere})\n\n${url}`
+    );
+    window.open(`https://api.whatsapp.com/send?text=${messaggio}`, '_blank');
   };
 
   if (caricamento) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-xs text-slate-500">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-xs text-slate-400">
         Caricamento annuncio in corso...
       </div>
     );
@@ -141,7 +146,7 @@ export default function DettaglioAnnuncioPage({
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <h1 className="text-base font-bold text-slate-900 mb-2">Annuncio non trovato</h1>
         <p className="text-xs text-slate-500 mb-4">L'oggetto potrebbe essere stato venduto o rimosso.</p>
-        <Link href="/" className="text-xs bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl">
+        <Link href="/" className="text-xs bg-blue-800 text-white font-bold px-4 py-2 rounded-xl">
           Torna alla bacheca
         </Link>
       </div>
@@ -151,19 +156,28 @@ export default function DettaglioAnnuncioPage({
   const immagini = annuncio.immagini && annuncio.immagini.length > 0 ? annuncio.immagini : [];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       {/* Header bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between">
-          <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
+        <div className="max-w-5xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-2">
+          <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-blue-900 flex items-center gap-1">
             ← Torna alla bacheca
           </Link>
-          <button
-            onClick={condividi}
-            className="text-xs text-slate-600 hover:text-slate-900 font-semibold border border-slate-200 px-3 py-1.5 rounded-xl bg-slate-50"
-          >
-            {copiato ? '✓ Link copiato!' : '🔗 Condividi'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={condividiSuWhatsApp}
+              className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-xs"
+            >
+              <span>📲</span>
+              <span>WhatsApp</span>
+            </button>
+            <button
+              onClick={condividiLink}
+              className="text-xs text-slate-600 hover:text-slate-900 font-medium border border-slate-200 px-3 py-1.5 rounded-xl bg-slate-50"
+            >
+              {copiato ? '✓ Link copiato!' : '🔗 Copia link'}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -172,7 +186,7 @@ export default function DettaglioAnnuncioPage({
           
           {/* Colonna Sinistra: Galleria Fotografica */}
           <div className="md:col-span-7 space-y-3">
-            <div className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs aspect-4/3 flex items-center justify-center group">
+            <div className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs aspect-4/3 flex items-center justify-center group">
               {immagini.length > 0 ? (
                 <>
                   <img
@@ -184,17 +198,17 @@ export default function DettaglioAnnuncioPage({
                   <button
                     type="button"
                     onClick={() => setZoomAperto(true)}
-                    className="absolute bottom-3 right-3 bg-slate-900/70 hover:bg-slate-900 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1 transition"
+                    className="absolute bottom-3 right-3 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1 transition"
                   >
                     <span>🔍</span> Ingrandisci
                   </button>
-                  <span className="absolute top-3 left-3 bg-slate-900/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
+                  <span className="absolute top-3 left-3 bg-slate-900/75 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
                     {fotoSelezionata + 1} / {immagini.length}
                   </span>
                 </>
               ) : (
                 <div className="text-center p-8">
-                  <span className="text-4xl block mb-2">📷</span>
+                  <span className="text-4xl block mb-2">📦</span>
                   <p className="text-xs text-slate-400 font-medium">Nessuna foto disponibile</p>
                 </div>
               )}
@@ -209,7 +223,7 @@ export default function DettaglioAnnuncioPage({
                     type="button"
                     onClick={() => setFotoSelezionata(idx)}
                     className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 shrink-0 transition ${
-                      fotoSelezionata === idx ? 'border-emerald-600 shadow-xs' : 'border-slate-200 opacity-60 hover:opacity-100'
+                      fotoSelezionata === idx ? 'border-blue-800 shadow-xs' : 'border-slate-200 opacity-60 hover:opacity-100'
                     }`}
                   >
                     <img src={url} alt="" className="w-full h-full object-cover" />
@@ -221,10 +235,10 @@ export default function DettaglioAnnuncioPage({
 
           {/* Colonna Destra: Dettagli, Venditore & Azione */}
           <div className="md:col-span-5 space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-flex items-center text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+                  <span className="inline-flex items-center text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
                     📍 {annuncio.quartiere}
                   </span>
                   <span className="text-[11px] text-slate-400">Genova</span>
@@ -238,15 +252,13 @@ export default function DettaglioAnnuncioPage({
                 <span className="text-3xl font-black text-slate-900">
                   {annuncio.prezzo === 0 ? 'Gratis' : `${annuncio.prezzo} €`}
                 </span>
-                {annuncio.prezzo > 0 && (
-                  <span className="text-xs text-slate-500 font-medium">Ritiro e scambio a mano</span>
-                )}
+                <span className="text-xs text-slate-500 font-medium">Scambio a mano</span>
               </div>
 
               {/* Box Venditore */}
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm">
+                  <div className="w-10 h-10 rounded-full bg-blue-800 text-white font-black flex items-center justify-center text-sm shadow-xs">
                     {nicknameVenditore.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -254,8 +266,8 @@ export default function DettaglioAnnuncioPage({
                     <p className="text-[10px] text-slate-500">Membro Zena &amp; Go</p>
                   </div>
                 </div>
-                <span className="text-[10px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded font-semibold">
-                  Verificato
+                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">
+                  Genova
                 </span>
               </div>
 
@@ -263,7 +275,7 @@ export default function DettaglioAnnuncioPage({
               {mioId === annuncio.user_id ? (
                 <Link
                   href="/profilo"
-                  className="w-full inline-block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl text-xs transition"
+                  className="w-full inline-block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl text-xs transition border border-slate-200"
                 >
                   Questo è un tuo annuncio (gestisci)
                 </Link>
@@ -271,7 +283,7 @@ export default function DettaglioAnnuncioPage({
                 <button
                   type="button"
                   onClick={avviaChat}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-2"
+                  className="w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3.5 rounded-xl text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-2"
                 >
                   <span>💬</span>
                   <span>Scrivi in Chat al Venditore</span>
@@ -287,8 +299,8 @@ export default function DettaglioAnnuncioPage({
               </div>
 
               {/* Promemoria Sicurezza */}
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/70 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
-                <span className="text-sm">🛡️</span>
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
+                <span>🛡️</span>
                 <span>
                   <strong>Scambio sicuro a Genova:</strong> incontratevi sempre di persona in un luogo pubblico del quartiere e verificate l'oggetto prima di pagare in contanti.
                 </span>
