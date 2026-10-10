@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect') || '/';
+
   const [modalita, setModalita] = useState<'login' | 'registrazione'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,7 +42,7 @@ export default function LoginPage() {
         if (data.user) {
           localStorage.setItem('zena_user_id', data.user.id);
           localStorage.setItem('zena_nickname', nickname.trim());
-          router.push('/');
+          router.push(redirectPath);
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -52,7 +55,7 @@ export default function LoginPage() {
           const nick = data.user.user_metadata?.nickname || email.split('@')[0];
           localStorage.setItem('zena_user_id', data.user.id);
           localStorage.setItem('zena_nickname', nick);
-          router.push('/');
+          router.push(redirectPath);
         }
       }
     } catch (err: any) {
@@ -67,7 +70,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}${redirectPath}`,
         },
       });
       if (error) throw error;
@@ -86,14 +89,18 @@ export default function LoginPage() {
             Zena &amp; Go
           </Link>
           <h2 className="text-lg font-bold text-slate-900">
-            {modalita === 'login' ? 'Accedi al tuo profilo' : 'Crea il tuo profilo Zena & Go'}
+            {modalita === 'login' ? 'Accedi per continuare' : 'Crea il tuo profilo Zena & Go'}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Gestisci chat, annunci e networking nel tuo quartiere a Genova.
+            {redirectPath.includes('chat')
+              ? 'Accedi per contattare il venditore nella chat sicura.'
+              : redirectPath.includes('pubblica')
+              ? 'Accedi per inserire il tuo annuncio nel quartiere.'
+              : 'Accedi per gestire messaggi e annunci a Genova.'}
           </p>
         </div>
 
-        {/* Tab Switch Login / Registrati */}
+        {/* Tab Switch */}
         <div className="flex bg-slate-100 p-1 rounded-xl mb-5">
           <button
             type="button"
@@ -115,7 +122,7 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Tasti Social OAuth (Apple + Google) */}
+        {/* Apple & Google Buttons */}
         <div className="space-y-2 mb-4">
           <button
             type="button"
@@ -134,22 +141,10 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs py-2.5 rounded-xl transition shadow-2xs"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.66-5.17 3.66-9.12z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.13C3.26 21.36 7.33 24 12 24z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.26C.46 8.19 0 9.99 0 12s.46 3.81 1.26 5.42l4.02-3.13z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.26 6.58l4.02 3.13c.95-2.83 3.6-4.96 6.72-4.96z"
-              />
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.66-5.17 3.66-9.12z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.13C3.26 21.36 7.33 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.26C.46 8.19 0 9.99 0 12s.46 3.81 1.26 5.42l4.02-3.13z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.26 6.58l4.02 3.13c.95-2.83 3.6-4.96 6.72-4.96z"/>
             </svg>
             Continua con Google
           </button>
@@ -179,7 +174,7 @@ export default function LoginPage() {
                 style={inputStyle}
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="es. ZenaCollector, Marco_Albaro..."
+                placeholder="es. Cinefilo_Nervi, Andrea_Albaro..."
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -222,7 +217,7 @@ export default function LoginPage() {
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-xs disabled:opacity-50 mt-2"
           >
             {caricamento
-              ? 'Caricamento in corso...'
+              ? 'Caricamento...'
               : modalita === 'login'
               ? 'Accedi'
               : 'Registrati gratis'}
@@ -231,10 +226,18 @@ export default function LoginPage() {
 
         <div className="mt-5 text-center">
           <Link href="/" className="text-xs text-slate-500 hover:text-slate-800">
-            ← Torna alla bacheca senza accedere
+            ← Continua a curiosare in bacheca
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs text-slate-500">Caricamento...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
