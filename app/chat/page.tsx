@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -26,7 +26,7 @@ interface Conversazione {
   };
 }
 
-export default function ChatPage() {
+function ChatContent() {
   const searchParams = useSearchParams();
   const annuncioParam = searchParams.get('annuncioId');
   const venditoreParam = searchParams.get('venditore');
@@ -41,7 +41,7 @@ export default function ChatPage() {
 
   const messaggiEndRef = useRef<HTMLDivElement>(null);
 
-  // Inizializza o recupera l'utente locale
+  // Inizializza utente locale
   useEffect(() => {
     let id = localStorage.getItem('zena_user_id');
     let nick = localStorage.getItem('zena_nickname');
@@ -59,14 +59,13 @@ export default function ChatPage() {
     setMioNickname(nick);
   }, []);
 
-  // Carica le conversazioni dell'utente o creane una se aperta da annuncio
+  // Gestione conversazioni
   useEffect(() => {
     if (!mioId) return;
 
     const inizializzaChat = async () => {
       setCaricamento(true);
 
-      // Se arriva con parametri da un annuncio, crea/apri la conversazione
       if (annuncioParam && venditoreParam && venditoreParam !== mioId) {
         const { data: convEsistente } = await supabase
           .from('conversazioni')
@@ -96,7 +95,6 @@ export default function ChatPage() {
         }
       }
 
-      // Recupera tutte le conversazioni in cui sono venditore o compratore
       const { data } = await supabase
         .from('conversazioni')
         .select('*, annunci(titolo, prezzo, quartiere, immagini)')
@@ -116,7 +114,7 @@ export default function ChatPage() {
     inizializzaChat();
   }, [mioId, annuncioParam, venditoreParam]);
 
-  // Carica i messaggi della chat attiva e attiva il Realtime
+  // Messaggi e Realtime
   useEffect(() => {
     if (!chatSelezionata) return;
 
@@ -132,7 +130,6 @@ export default function ChatPage() {
 
     caricaMessaggi();
 
-    // Sottoscrizione realtime ai nuovi messaggi
     const channel = supabase
       .channel(`chat_${chatSelezionata.id}`)
       .on(
@@ -174,13 +171,12 @@ export default function ChatPage() {
     ]);
 
     if (error) {
-      alert("Errore nell'invio del messaggio: " + error.message);
+      alert("Errore nell'invio: " + error.message);
     }
   };
 
   return (
     <div className="h-screen flex flex-col bg-slate-100">
-      {/* Header navigazione */}
       <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
@@ -193,9 +189,7 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Contenitore principale chat */}
       <div className="flex-1 flex overflow-hidden max-w-6xl w-full mx-auto bg-white border-x border-slate-200">
-        {/* Barra laterale conversazioni */}
         <div className="w-1/3 border-r border-slate-200 flex flex-col bg-slate-50">
           <div className="p-3 border-b border-slate-200 font-semibold text-xs text-slate-500 uppercase tracking-wider">
             Conversazioni
@@ -205,7 +199,7 @@ export default function ChatPage() {
               <div className="p-4 text-xs text-slate-400 text-center">Caricamento...</div>
             ) : conversazioni.length === 0 ? (
               <div className="p-4 text-xs text-slate-500 text-center">
-                Nessuna conversazione ancora. Clicca &quot;Contatta&quot; su un annuncio per iniziare!
+                Nessuna conversazione attiva.
               </div>
             ) : (
               conversazioni.map((conv) => {
@@ -240,21 +234,16 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Finestra di conversazione */}
         <div className="flex-1 flex flex-col bg-slate-50/50">
           {chatSelezionata ? (
             <>
-              {/* Box riepilogo annuncio in cima alla chat */}
               {chatSelezionata.annunci && (
                 <div className="p-3 bg-white border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">🤝</span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">{chatSelezionata.annunci.titolo}</p>
-                      <p className="text-[11px] text-slate-500">
-                        Scambio a mano: <strong>{chatSelezionata.annunci.quartiere}</strong>
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900">{chatSelezionata.annunci.titolo}</p>
+                    <p className="text-[11px] text-slate-500">
+                      Scambio a mano: <strong>{chatSelezionata.annunci.quartiere}</strong>
+                    </p>
                   </div>
                   <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
                     {chatSelezionata.annunci.prezzo === 0 ? 'Gratis' : `${chatSelezionata.annunci.prezzo} €`}
@@ -262,11 +251,10 @@ export default function ChatPage() {
                 </div>
               )}
 
-              {/* Area messaggi */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {messaggi.length === 0 ? (
                   <div className="text-center text-xs text-slate-400 mt-8">
-                    Invia un messaggio per accordarti sullo scambio a Genova!
+                    Invia un messaggio per concordare luogo e ora dello scambio a Genova!
                   </div>
                 ) : (
                   messaggi.map((m) => {
@@ -295,13 +283,12 @@ export default function ChatPage() {
                 <div ref={messaggiEndRef} />
               </div>
 
-              {/* Input invio messaggio */}
               <form onSubmit={inviaMessaggio} className="p-3 bg-white border-t border-slate-200 flex gap-2">
                 <input
                   type="text"
                   value={nuovoTesto}
                   onChange={(e) => setNuovoTesto(e.target.value)}
-                  placeholder="Scrivi un messaggio per concordare punto d'incontro..."
+                  placeholder="Scrivi un messaggio per accordarti..."
                   style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
                   className="flex-1 text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
@@ -321,5 +308,13 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs text-slate-500">Caricamento chat...</div>}>
+      <ChatContent />
+    </Suspense>
   );
 }
