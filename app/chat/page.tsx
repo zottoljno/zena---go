@@ -39,10 +39,8 @@ function ChatContent() {
   const [nuovoTesto, setNuovoTesto] = useState('');
   const [caricamento, setCaricamento] = useState(true);
 
-  // Mappa dei profili per visualizzare i nickname
   const [profiliMap, setProfiliMap] = useState<Record<string, string>>({});
 
-  // Gestione Sicurezza: Blocco e Segnalazione
   const [menuSicurezzaAperto, setMenuSicurezzaAperto] = useState(false);
   const [modalSegnalaAperto, setModalSegnalaAperto] = useState(false);
   const [motivoSegnalazione, setMotivoSegnalazione] = useState('Comportamento scorretto');
@@ -209,7 +207,7 @@ function ChatContent() {
         bloccato_id: idControparte,
       });
     } catch {
-      // Fallback
+      // Ignora errore se tabella non creata
     }
 
     setMenuSicurezzaAperto(false);
@@ -219,70 +217,4 @@ function ChatContent() {
     const nuovaLista = utentiBloccati.filter((id) => id !== idControparte);
     setUtentiBloccati(nuovaLista);
     localStorage.setItem(`zena_bloccati_${mioId}`, JSON.stringify(nuovaLista));
-    setMenuSicurezzaAperto(false);
-  };
-
-  const inviaSegnalazione = async () => {
-    if (!conversazioneAttiva || !idControparte) return;
-
-    try {
-      await supabase.from('segnalazioni').insert({
-        segnalatore_id: mioId,
-        segnalato_id: idControparte,
-        conversazione_id: conversazioneAttiva.id,
-        motivo: motivoSegnalazione,
-        dettagli: dettaglioSegnalazione,
-      });
-    } catch {
-      // Fallback
-    }
-
-    setSegnalazioneInviata(true);
-    setTimeout(() => {
-      setSegnalazioneInviata(false);
-      setModalSegnalaAperto(false);
-      setMenuSicurezzaAperto(false);
-      setDettaglioSegnalazione('');
-    }, 1800);
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1">
-            ← Bacheca Zena &amp; Go
-          </Link>
-          <span className="font-extrabold text-slate-900 text-sm">Messaggi &amp; Trattative</span>
-          <Link href="/profilo" className="text-xs text-slate-500 hover:text-slate-800">
-            Profilo
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-6xl w-full mx-auto p-3 sm:p-6 flex-1 flex flex-col md:flex-row gap-4 h-[calc(100vh-64px)]">
-        <aside className="w-full md:w-80 bg-white rounded-2xl border border-slate-200 shadow-2xs flex flex-col overflow-hidden shrink-0">
-          <div className="p-3.5 border-b border-slate-100 bg-slate-50">
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Le tue conversazioni</h2>
-          </div>
-
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {caricamento ? (
-              <p className="p-4 text-xs text-slate-400 text-center">Caricamento chat...</p>
-            ) : conversazioni.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">
-                Nessuna conversazione attiva.<br />
-                Scrivi a un annuncio per avviare uno scambio!
-              </div>
-            ) : (
-              conversazioni.map((c) => {
-                const partnerId = c.compratore_id === mioId ? c.venditore_id : c.compratore_id;
-                const partnerNick = profiliMap[partnerId] || `Utente_${partnerId.slice(0, 5)}`;
-                const isSelected = conversazioneAttiva?.id === c.id;
-
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setConversazioneAttiva(c)}
-                    className={`w-full text-left p-3.5 flex items-center gap-3 transition ${
-                      isSelected ? 'bg-emerald-50/70 border
+    setMenu
