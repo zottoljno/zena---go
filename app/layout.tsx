@@ -3,8 +3,12 @@ import "./globals.css";
 import Footer from "./Footer";
 
 export const metadata: Metadata = {
-  title: "Zena & Go - Il Marketplace di Genova",
-  description: "Compra e vendi a mano nei quartieri di Genova",
+  title: "Zena & GO",
+  description:
+    "Nessuna spedizione, zero commissioni, nessuna attesa. Cerca, trova, accordati, compra.",
+  verification: {
+    google: "JvOh0rs1QnWYgpke4bgmMtk5SliE2bgPMdlHOZnT2kg",
+  },
 };
 
 export default function RootLayout({
@@ -15,9 +19,7 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body className="min-h-screen flex flex-col justify-between bg-white text-slate-900 antialiased">
-        <main className="flex-grow">
-          {children}
-        </main>
+        <main className="flex-grow">{children}</main>
         <Footer />
       </body>
     </html>
