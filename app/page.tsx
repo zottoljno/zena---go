@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 interface Annuncio {
@@ -32,13 +33,29 @@ const QUARTIERI_GENOVA = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [annunci, setAnnunci] = useState<Annuncio[]>([]);
   const [caricamento, setCaricamento] = useState(true);
+  const [sessioneUtente, setSessioneUtente] = useState<any>(null);
+  const [nickname, setNickname] = useState('');
   const [filtroQuartiere, setFiltroQuartiere] = useState('Tutti i quartieri');
   const [ricerca, setRicerca] = useState('');
   const [soloRegalo, setSoloRegalo] = useState(false);
 
   useEffect(() => {
+    // Controlla se c'è un utente loggato senza bloccare chi guarda
+    const controllaSessione = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setSessioneUtente(session.user);
+        const nick = session.user.user_metadata?.nickname || session.user.email?.split('@')[0] || 'Genovese';
+        setNickname(nick);
+        localStorage.setItem('zena_user_id', session.user.id);
+        localStorage.setItem('zena_nickname', nick);
+      }
+    };
+
+    controllaSessione();
     caricaAnnunci();
   }, []);
 
@@ -60,6 +77,22 @@ export default function Home() {
     } finally {
       setCaricamento(false);
     }
+  };
+
+  const handleAzioneProtetta = (destinazione: string) => {
+    if (sessioneUtente) {
+      router.push(destinazione);
+    } else {
+      router.push(`/login?redirect=${encodeURIComponent(destinazione)}`);
+    }
+  };
+
+  const disconnetti = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem('zena_user_id');
+    localStorage.removeItem('zena_nickname');
+    setSessioneUtente(null);
+    setNickname('');
   };
 
   const annunciFiltrati = annunci.filter((a) => {
@@ -87,55 +120,74 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Link
-              href="/chat"
-              className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2 rounded-xl transition border border-slate-200"
-            >
-              <span>💬</span>
-              <span>I Miei Messaggi</span>
-            </Link>
+            {sessioneUtente ? (
+              <>
+                <span className="text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-xl">
+                  👤 {nickname}
+                </span>
 
-            <Link
-              href="/pubblica"
-              className="flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition shadow-xs"
-            >
-              <span>+</span>
-              <span>Pubblica</span>
-            </Link>
+                <button
+                  onClick={() => handleAzioneProtetta('/chat')}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl transition border border-slate-200"
+                >
+                  <span>💬</span>
+                  <span className="hidden sm:inline">Messaggi</span>
+                </button>
+
+                <button
+                  onClick={() => handleAzioneProtetta('/pubblica')}
+                  className="flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs"
+                >
+                  <span>+</span>
+                  <span>Pubblica</span>
+                </button>
+
+                <button
+                  onClick={disconnetti}
+                  className="text-xs text-slate-400 hover:text-red-600 p-1 transition"
+                  title="Esci"
+                >
+                  Esci
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleAzioneProtetta('/pubblica')}
+                  className="flex items-center gap-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs"
+                >
+                  <span>+</span>
+                  <span>Pubblica</span>
+                </button>
+
+                <Link
+                  href="/login"
+                  className="text-xs font-bold bg-slate-900 hover:bg-black text-white px-3.5 py-1.5 rounded-xl transition"
+                >
+                  Accedi
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Banner / Hero Spiegazione Community */}
+      {/* Hero & Ricerca */}
       <section className="bg-white border-b border-slate-200 py-6 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto space-y-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900">
-              Scambia, regala e fai networking a Genova
+              Scambia, regala e trova oggetti a Genova
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              Trova collezioni, libri e oggetti nel tuo quartiere. Ti accordi nella <strong>chat interna del sito</strong>, senza dover dare il tuo numero privato.
+              Esplora liberamente gli annunci. Accordati con la <strong>chat interna</strong> al momento dello scambio.
             </p>
           </div>
 
-          {/* Badge Informativi */}
-          <div className="flex flex-wrap gap-2 pt-1 text-xs text-slate-600 font-medium">
-            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg">
-              🔒 Chat interna protetta
-            </span>
-            <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg">
-              🤝 Solo scambi a mano
-            </span>
-            <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg">
-              📍 Suddiviso per quartieri
-            </span>
-          </div>
-
-          {/* Ricerca e Filtro */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
             <input
               type="text"
-              placeholder="Cosa cerchi? (es. DVD, fumetti, libri, accessori...)"
+              placeholder="Cosa stai cercando? (es. DVD, fumetti, libri...)"
               value={ricerca}
               onChange={(e) => setRicerca(e.target.value)}
               style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
@@ -170,7 +222,7 @@ export default function Home() {
               <span>Solo oggetti in regalo</span>
             </button>
             <span className="text-xs text-slate-400">
-              ({annunciFiltrati.length} annunci)
+              ({annunciFiltrati.length} annunci disponibili)
             </span>
           </div>
         </div>
@@ -179,18 +231,18 @@ export default function Home() {
       {/* Griglia Annunci */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
         {caricamento ? (
-          <div className="text-center py-16 text-slate-400 text-sm">Caricamento annunci...</div>
+          <div className="text-center py-16 text-slate-400 text-sm">Caricamento bacheca...</div>
         ) : annunciFiltrati.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8">
             <p className="text-3xl mb-2">🔍</p>
             <h3 className="font-bold text-slate-900 text-base mb-1">Nessun annuncio trovato</h3>
-            <p className="text-xs text-slate-500 mb-4">Prova un altro quartiere o pubblica il primo annuncio!</p>
-            <Link
-              href="/pubblica"
+            <p className="text-xs text-slate-500 mb-4">Prova un altro quartiere o inserisci il tuo annuncio!</p>
+            <button
+              onClick={() => handleAzioneProtetta('/pubblica')}
               className="inline-block bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition"
             >
               Pubblica un annuncio
-            </Link>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -235,13 +287,17 @@ export default function Home() {
                 </div>
 
                 <div className="p-3.5 pt-0">
-                  <Link
-                    href={`/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`}
+                  <button
+                    onClick={() =>
+                      handleAzioneProtetta(
+                        `/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`
+                      )
+                    }
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
                   >
                     <span>💬</span>
                     <span>Scrivi in Chat</span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             ))}
