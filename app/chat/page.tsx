@@ -29,6 +29,14 @@ interface Conversazione {
   };
 }
 
+const RISPOSTE_RAPIDE = [
+  'Ciao! È ancora disponibile?',
+  'Ci vediamo in Piazza De Ferrari?',
+  'Possiamo vederci a Brignole?',
+  'A che ora sei libero per lo scambio?',
+  'Perfetto, ci vediamo lì!',
+];
+
 function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -48,6 +56,9 @@ function ChatContent() {
   const [dettaglioSegnalazione, setDettaglioSegnalazione] = useState('');
   const [segnalazioneInviata, setSegnalazioneInviata] = useState(false);
   const [utentiBloccati, setUtentiBloccati] = useState<string[]>([]);
+
+  // Per mobile: visualizzare la lista o la conversazione attiva
+  const [vistaMobile, setVistaMobile] = useState<'lista' | 'chat'>('lista');
 
   const fineMessaggiRef = useRef<HTMLDivElement>(null);
 
@@ -103,7 +114,7 @@ function ChatContent() {
 
       const convList = convData as unknown as Conversazione[];
 
-      // Conta non letti per ogni conversazione
+      // Conteggio messaggi non letti per ciascuna chat
       const { data: messaggiNonLetti } = await supabase
         .from('messaggi')
         .select('conversazione_id')
@@ -124,7 +135,7 @@ function ChatContent() {
 
       setConversazioni(convConConteggi);
 
-      // Nicknames controparti
+      // Recupera i nickname degli altri utenti
       const idsToFetch = new Set<string>();
       convList.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
@@ -151,6 +162,7 @@ function ChatContent() {
         const trovata = convConConteggi.find((c) => String(c.id) === conversazioneIdParam);
         if (trovata) {
           setConversazioneAttiva(trovata);
+          setVistaMobile('chat');
           return;
         }
       }
@@ -163,7 +175,7 @@ function ChatContent() {
     }
   };
 
-  // Segna come letti quando si apre la conversazione
+  // Caricamento messaggi + Realtime
   useEffect(() => {
     if (!conversazioneAttiva || !mioId) {
       setMessaggi([]);
@@ -180,7 +192,6 @@ function ChatContent() {
         .neq('mittente_id', mioId)
         .eq('letto', false);
 
-      // Azzera contatore nella lista
       setConversazioni((prev) =>
         prev.map((c) => (c.id === conversazioneAttiva.id ? { ...c, non_letti: 0 } : c))
       );
@@ -215,7 +226,15 @@ function ChatContent() {
         (payload) => {
           const nuovoMsg = payload.new as Messaggio;
           setMessaggi((prev) => {
-            if (prev.some((m) => m.id === nuovoMsg.id || (m.mittente_id === nuovoMsg.mittente_id && m.testo === nuovoMsg.testo && m.id.startsWith('temp-')))) {
+            if (
+              prev.some(
+                (m) =>
+                  m.id === nuovoMsg.id ||
+                  (m.mittente_id === nuovoMsg.mittente_id &&
+                    m.testo === nuovoMsg.testo &&
+                    m.id.startsWith('temp-'))
+              )
+            ) {
               return prev.map((m) =>
                 m.testo === nuovoMsg.testo && m.id.startsWith('temp-') ? nuovoMsg : m
               );
@@ -225,7 +244,7 @@ function ChatContent() {
           if (nuovoMsg.mittente_id !== mioId) {
             segnaComeLetti();
           }
-          setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+          setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
         }
       )
       .subscribe();
@@ -243,14 +262,14 @@ function ChatContent() {
     : '';
 
   const nicknameControparte = idControparte
-    ? profiliMap[idControparte] || `Utente_${idControparte.slice(0, 5)}`
+    ? profiliMap[idControparte] || `Genovese_${idControparte.slice(0, 4)}`
     : 'Utente Zena & Go';
 
   const utenteAttualeBloccato = utentiBloccati.includes(idControparte);
 
-  const inviaMessaggio = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const testo = nuovoTesto.trim();
+  const inviaMessaggio = async (e?: React.FormEvent, testoParam?: string) => {
+    if (e) e.preventDefault();
+    const testo = (testoParam || nuovoTesto).trim();
     if (!testo || !conversazioneAttiva || utenteAttualeBloccato) return;
 
     const tempId = `temp-${Date.now()}`;
@@ -298,9 +317,8 @@ function ChatContent() {
         bloccante_id: mioId,
         bloccato_id: idControparte,
       });
-    } catch {
-      // Ignora se la tabella non esiste
-    }
+    } catch {}
+
     setMenuSicurezzaAperto(false);
   };
 
@@ -347,72 +365,109 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
-      <header className="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20 shadow-xs">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-blue-900 flex items-center gap-1">
-            ← Bacheca Zena &amp; Go
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800">
+      {/* Top Navbar compatta */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
+          <Link
+            href="/"
+            className="text-xs font-bold text-slate-700 hover:text-blue-900 flex items-center gap-1.5 transition"
+          >
+            <span>←</span>
+            <span>Bacheca</span>
           </Link>
-          <span className="font-extrabold text-slate-900 text-sm">Messaggi &amp; Trattative</span>
-          <Link href="/profilo" className="text-xs text-slate-500 hover:text-slate-800 font-medium">
-            Profilo
+
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="font-black text-slate-900 text-sm tracking-tight">
+              Chat &amp; Scambi
+            </span>
+          </div>
+
+          <Link
+            href="/profilo"
+            className="text-xs font-medium text-slate-500 hover:text-slate-800 transition"
+          >
+            Mio Profilo
           </Link>
         </div>
       </header>
 
-      <main className="max-w-6xl w-full mx-auto p-3 sm:p-6 flex-1 flex flex-col md:flex-row gap-4 h-[calc(100vh-64px)]">
-        {/* Lista conversazioni */}
-        <aside className="w-full md:w-80 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden shrink-0">
-          <div className="p-3.5 border-b border-slate-100 bg-slate-50">
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Le tue conversazioni</h2>
+      {/* Main Container a 2 colonne */}
+      <main className="max-w-6xl w-full mx-auto p-2 sm:p-4 flex-1 flex flex-col md:flex-row gap-3 h-[calc(100vh-57px)]">
+        
+        {/* Colonna Sinistra: Lista Chat */}
+        <aside
+          className={`w-full md:w-80 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden shrink-0 transition-all ${
+            vistaMobile === 'chat' ? 'hidden md:flex' : 'flex'
+          }`}
+        >
+          <div className="p-3.5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+            <h2 className="text-xs font-black text-slate-800 tracking-wide uppercase">
+              I tuoi contatti ({conversazioni.length})
+            </h2>
+            <span className="text-[10px] text-slate-400 font-semibold">Genova</span>
           </div>
 
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {caricamento ? (
-              <p className="p-4 text-xs text-slate-400 text-center">Caricamento chat...</p>
+              <div className="p-8 text-center text-xs text-slate-400 space-y-2">
+                <div className="w-6 h-6 border-2 border-blue-800 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p>Caricamento chat...</p>
+              </div>
             ) : conversazioni.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">
-                Nessuna conversazione attiva.<br />
-                Scrivi a un annuncio per avviare uno scambio!
+              <div className="p-8 text-center text-xs text-slate-400 space-y-2">
+                <span className="text-3xl block">💬</span>
+                <p className="font-semibold text-slate-600">Nessuna conversazione ancora</p>
+                <p className="text-[11px] text-slate-400">
+                  Scrivi a un annuncio in bacheca per iniziare uno scambio a mano!
+                </p>
               </div>
             ) : (
               conversazioni.map((c) => {
                 const partnerId = c.compratore_id === mioId ? c.venditore_id : c.compratore_id;
-                const partnerNick = profiliMap[partnerId] || `Utente_${partnerId.slice(0, 5)}`;
+                const partnerNick = profiliMap[partnerId] || `Genovese_${partnerId.slice(0, 4)}`;
                 const isSelected = conversazioneAttiva?.id === c.id;
 
                 return (
                   <button
                     key={c.id}
-                    onClick={() => setConversazioneAttiva(c)}
-                    className={
+                    onClick={() => {
+                      setConversazioneAttiva(c);
+                      setVistaMobile('chat');
+                    }}
+                    className={`w-full text-left p-3.5 flex items-center gap-3 transition relative group ${
                       isSelected
-                        ? 'w-full text-left p-3.5 flex items-center gap-3 transition bg-blue-50/80 border-l-4 border-blue-800'
-                        : 'w-full text-left p-3.5 flex items-center gap-3 transition hover:bg-slate-50'
-                    }
+                        ? 'bg-blue-50/90 border-l-4 border-blue-800'
+                        : 'hover:bg-slate-50'
+                    }`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-sm font-bold text-slate-600 relative">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-800 to-slate-900 text-white overflow-hidden shrink-0 flex items-center justify-center font-black text-sm shadow-xs relative">
                       {c.annunci?.immagini?.[0] ? (
                         <img src={c.annunci.immagini[0]} alt="" className="w-full h-full object-cover" />
                       ) : (
                         partnerNick.charAt(0).toUpperCase()
                       )}
                     </div>
+
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-bold text-xs text-slate-900 truncate">{partnerNick}</span>
-                        <div className="flex items-center gap-1">
-                          {c.non_letti !== undefined && c.non_letti > 0 && (
-                            <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center">
-                              {c.non_letti}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-slate-400 font-medium">
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <span className="font-bold text-xs text-slate-900 truncate group-hover:text-blue-900 transition">
+                          {partnerNick}
+                        </span>
+                        {c.non_letti !== undefined && c.non_letti > 0 ? (
+                          <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center">
+                            {c.non_letti}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-semibold">
                             {c.annunci?.prezzo === 0 ? 'Gratis' : `${c.annunci?.prezzo} €`}
                           </span>
-                        </div>
+                        )}
                       </div>
-                      <p className="text-[11px] text-slate-500 truncate">{c.annunci?.titolo || 'Trattativa'}</p>
+                      <p className="text-[11px] text-slate-500 truncate font-medium">
+                        {c.annunci?.titolo || 'Trattativa in corso'}
+                      </p>
                     </div>
                   </button>
                 );
@@ -421,47 +476,67 @@ function ChatContent() {
           </div>
         </aside>
 
-        {/* Finestra chat attiva */}
-        <section className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden relative">
+        {/* Colonna Destra: Chat attiva */}
+        <section
+          className={`flex-1 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden relative ${
+            vistaMobile === 'lista' ? 'hidden md:flex' : 'flex'
+          }`}
+        >
           {conversazioneAttiva ? (
             <>
-              {/* Header chat attiva */}
-              <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-white z-10">
-                <div className="flex items-center gap-3 min-w-0">
+              {/* Header Conversazione Attiva */}
+              <div className="p-3 border-b border-slate-200 flex items-center justify-between bg-white z-10 shadow-2xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {/* Tasto indietro visibile su mobile */}
+                  <button
+                    type="button"
+                    onClick={() => setVistaMobile('lista')}
+                    className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 rounded-lg"
+                    title="Torna all'elenco"
+                  >
+                    ←
+                  </button>
+
                   <div className="w-10 h-10 rounded-xl bg-blue-800 text-white font-black flex items-center justify-center text-sm shrink-0 shadow-xs">
                     {nicknameControparte.charAt(0).toUpperCase()}
                   </div>
+
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-extrabold text-sm text-slate-900 truncate">{nicknameControparte}</h3>
-                      <span className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
-                        {conversazioneAttiva.venditore_id === mioId ? 'Acquirente' : 'Venditore'}
+                      <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                        {nicknameControparte}
+                      </h3>
+                      <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                        {conversazioneAttiva.venditore_id === mioId ? 'Compratore' : 'Venditore'}
                       </span>
                     </div>
+
                     {conversazioneAttiva.annuncio_id && (
                       <Link
                         href={`/annuncio/${conversazioneAttiva.annuncio_id}`}
-                        className="text-[11px] text-blue-800 hover:underline truncate block font-medium"
+                        className="text-[11px] text-blue-800 hover:text-blue-900 font-semibold truncate block flex items-center gap-1"
                       >
-                        Annuncio: <strong>{conversazioneAttiva.annunci?.titolo || 'Dettagli'}</strong> (
-                        {conversazioneAttiva.annunci?.quartiere})
+                        <span>📦</span>
+                        <span className="truncate">{conversazioneAttiva.annunci?.titolo || 'Vedi annuncio'}</span>
+                        <span className="text-slate-400">({conversazioneAttiva.annunci?.quartiere})</span>
                       </Link>
                     )}
                   </div>
                 </div>
 
+                {/* Menu Opzioni & Sicurezza */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setMenuSicurezzaAperto(!menuSicurezzaAperto)}
-                    className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition"
+                    className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition font-black text-sm"
                     title="Opzioni sicurezza"
                   >
                     ⋮
                   </button>
 
                   {menuSicurezzaAperto && (
-                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 text-xs">
+                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs">
                       <button
                         type="button"
                         onClick={() => {
@@ -495,42 +570,57 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Banner Sicurezza */}
-              <div className="bg-amber-50/80 border-b border-amber-200/80 px-3 py-1.5 text-[11px] text-amber-900 flex items-center justify-between">
-                <span>🛡️ <strong>Regola di Zena:</strong> incontro sempre di persona in un luogo pubblico del quartiere.</span>
-              </div>
+              {/* Area Messaggi */}
+              <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-2.5 bg-slate-50/70">
+                {/* Banner Scambio Sicuro compatto */}
+                <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-2 text-[11px] text-amber-900 flex items-center justify-center gap-1.5 text-center shadow-2xs">
+                  <span>🛡️</span>
+                  <span>
+                    Accordo di scambio a Genova: incontratevi di persona in un luogo pubblico.
+                  </span>
+                </div>
 
-              {/* Messaggi */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/60">
                 {messaggi.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 text-xs">
-                    Inizia la conversazione! Accordati su data, ora e punto di incontro a Genova.
+                  <div className="text-center py-12 text-slate-400 text-xs space-y-1">
+                    <p className="font-semibold text-slate-600">Nessun messaggio ancora.</p>
+                    <p>Invia un messaggio o tocca una delle risposte rapide qui sotto!</p>
                   </div>
                 ) : (
                   messaggi.map((m) => {
                     const isMio = m.mittente_id === mioId;
                     return (
-                      <div key={m.id} className={isMio ? 'flex flex-col items-end' : 'flex flex-col items-start'}>
+                      <div
+                        key={m.id}
+                        className={`flex flex-col ${isMio ? 'items-end' : 'items-start'}`}
+                      >
                         {!isMio && (
-                          <span className="text-[10px] text-slate-400 mb-0.5 ml-1">{nicknameControparte}</span>
+                          <span className="text-[10px] text-slate-400 mb-0.5 ml-2 font-semibold">
+                            {nicknameControparte}
+                          </span>
                         )}
                         <div
-                          className={
+                          className={`max-w-[82%] sm:max-w-[70%] px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed shadow-2xs ${
                             isMio
-                              ? 'max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed shadow-xs bg-blue-800 text-white'
-                              : 'max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed shadow-xs bg-white text-slate-800 border border-slate-200'
-                          }
+                              ? 'bg-gradient-to-br from-blue-800 to-blue-900 text-white rounded-2xl rounded-br-xs'
+                              : 'bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-bl-xs'
+                          }`}
                         >
                           <p className="whitespace-pre-wrap">{m.testo}</p>
-                          <span
-                            className={
-                              isMio
-                                ? 'block text-[9px] mt-1 text-right text-blue-100'
-                                : 'block text-[9px] mt-1 text-right text-slate-400'
-                            }
+                          <div
+                            className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
+                              isMio ? 'text-blue-200' : 'text-slate-400'
+                            }`}
                           >
-                            {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                            <span>
+                              {new Date(m.created_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            {isMio && (
+                              <span>{m.letto ? '✓✓' : '✓'}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -539,7 +629,23 @@ function ChatContent() {
                 <div ref={fineMessaggiRef} />
               </div>
 
-              {/* Input invio o blocco */}
+              {/* Risposte Rapide per Scambio a Genova */}
+              {!utenteAttualeBloccato && (
+                <div className="px-3 pt-2 pb-1 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto no-scrollbar">
+                  {RISPOSTE_RAPIDE.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => inviaMessaggio(undefined, chip)}
+                      className="whitespace-nowrap text-[11px] font-medium bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-700 px-3 py-1 rounded-full border border-slate-200 transition shrink-0"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Input Invio Messaggio */}
               {utenteAttualeBloccato ? (
                 <div className="p-3 bg-red-50 border-t border-red-200 text-center text-xs text-red-700 flex items-center justify-center gap-2">
                   <span>🚫 Hai bloccato {nicknameControparte}.</span>
@@ -548,27 +654,33 @@ function ChatContent() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={inviaMessaggio} className="p-3 border-t border-slate-200 bg-white flex gap-2">
+                <form
+                  onSubmit={(e) => inviaMessaggio(e)}
+                  className="p-2.5 sm:p-3 border-t border-slate-200 bg-white flex items-center gap-2"
+                >
                   <input
                     type="text"
                     value={nuovoTesto}
                     onChange={(e) => setNuovoTesto(e.target.value)}
-                    placeholder={`Scrivi un messaggio a ${nicknameControparte}...`}
-                    className="flex-1 text-xs sm:text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-800 text-slate-900"
+                    placeholder={`Scrivi a ${nicknameControparte}...`}
+                    className="flex-1 text-xs sm:text-sm border border-slate-300 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-800 text-slate-900 bg-slate-50 focus:bg-white transition"
                   />
                   <button
                     type="submit"
                     disabled={!nuovoTesto.trim()}
-                    className="bg-blue-800 hover:bg-blue-900 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-xs disabled:opacity-40"
+                    className="w-10 h-10 rounded-full bg-blue-800 hover:bg-blue-900 disabled:opacity-40 text-white font-bold flex items-center justify-center transition shadow-xs shrink-0"
+                    title="Invia"
                   >
-                    Invia
+                    ➤
                   </button>
                 </form>
               )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center p-6 text-slate-400 text-xs">
-              Seleziona una chat dalla lista per visualizzare i messaggi.
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400 text-xs space-y-2">
+              <span className="text-4xl">💬</span>
+              <p className="font-semibold text-slate-600">Nessuna conversazione selezionata</p>
+              <p className="text-slate-400">Scegli una chat a sinistra per accordarti sullo scambio.</p>
             </div>
           )}
         </section>
@@ -591,7 +703,7 @@ function ChatContent() {
 
             {segnalazioneInviata ? (
               <div className="p-4 bg-blue-50 text-blue-900 text-xs rounded-xl font-medium text-center border border-blue-200">
-                ✓ Segnalazione inviata ai moderatori di Zena &amp; Go. Grazie per il contributo alla sicurezza!
+                ✓ Segnalazione inviata ai moderatori di Zena &amp; Go.
               </div>
             ) : (
               <>
@@ -655,7 +767,7 @@ export default function ChatPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-slate-50 flex items-center justify-center text-xs text-slate-400">
-          Caricamento messaggi...
+          Caricamento chat...
         </div>
       }
     >
