@@ -51,73 +51,97 @@ function ChatContent() {
   const fineMessaggiRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let montato = true;
+
     const init = async () => {
+      // 1. Lettura immediata da cache per evitare attese
+      const idLocale = typeof window !== 'undefined' ? localStorage.getItem('zena_user_id') : null;
+      if (idLocale && montato) {
+        setMioId(idLocale);
+        const salvati = localStorage.getItem(`zena_bloccati_${idLocale}`);
+        if (salvati) {
+          try {
+            setUtentiBloccati(JSON.parse(salvati));
+          } catch {
+            setUtentiBloccati([]);
+          }
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.replace('/login?redirect=/chat');
         return;
       }
-      const uid = session.user.id;
-      setMioId(uid);
 
-      const salvati = localStorage.getItem(`zena_bloccati_${uid}`);
-      if (salvati) {
-        try {
-          setUtentiBloccati(JSON.parse(salvati));
-        } catch {
-          setUtentiBloccati([]);
-        }
+      const uid = session.user.id;
+      if (montato) {
+        setMioId(uid);
       }
 
       await caricaConversazioni(uid);
-      setCaricamento(false);
+      if (montato) setCaricamento(false);
     };
 
     init();
+
+    return () => {
+      montato = false;
+    };
   }, [router]);
 
   const caricaConversazioni = async (uid: string) => {
-    const { data: convData, error } = await supabase
-      .from('conversazioni')
-      .select('*, annunci(titolo, prezzo, quartiere, immagini)')
-      .or(`compratore_id.eq.${uid},venditore_id.eq.${uid}`)
-      .order('created_at', { ascending: false });
+    try {
+      const { data: convData, error } = await supabase
+        .from('conversazioni')
+        .select('id, annuncio_id, compratore_id, venditore_id, created_at, annunci(titolo, prezzo, quartiere, immagini)')
+        .or(`compratore_id.eq.${uid},venditore_id.eq.${uid}`)
+        .order('created_at', { ascending: false });
 
-    if (error || !convData) return;
-
-    setConversazioni(convData as Conversazione[]);
-
-    const idsToFetch = new Set<string>();
-    convData.forEach((c) => {
-      if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
-      if (c.venditore_id && c.venditore_id !== uid) idsToFetch.add(c.venditore_id);
-    });
-
-    if (idsToFetch.size > 0) {
-      const { data: profData } = await supabase
-        .from('profili')
-        .select('id, nickname')
-        .in('id', Array.from(idsToFetch));
-
-      if (profData) {
-        const mappa: Record<string, string> = {};
-        profData.forEach((p) => {
-          if (p.id && p.nickname) mappa[p.id] = p.nickname;
-        });
-        setProfiliMap(mappa);
-      }
-    }
-
-    if (conversazioneIdParam) {
-      const trovata = convData.find((c) => String(c.id) === conversazioneIdParam);
-      if (trovata) {
-        setConversazioneAttiva(trovata);
+      if (error || !convData) {
+        setConversazioni([]);
         return;
       }
-    }
 
-    if (convData.length > 0 && !conversazioneAttiva) {
-      setConversazioneAttiva(convData[0]);
+      const convList = convData as unknown as Conversazione[];
+      setConversazioni(convList);
+
+      // Caricamento asincrono leggero dei nickname senza bloccare l'interfaccia
+      const idsToFetch = new Set<string>();
+      convList.forEach((c) => {
+        if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
+        if (c.venditore_id && c.venditore_id !== uid) idsToFetch.add(c.venditore_id);
+      });
+
+      if (idsToFetch.size > 0) {
+        supabase
+          .from('profili')
+          .select('id, nickname')
+          .in('id', Array.from(idsToFetch))
+          .then(({ data: profData }) => {
+            if (profData) {
+              const mappa: Record<string, string> = {};
+              profData.forEach((p) => {
+                if (p.id && p.nickname) mappa[p.id] = p.nickname;
+              });
+              setProfiliMap(mappa);
+            }
+          });
+      }
+
+      if (conversazioneIdParam) {
+        const trovata = convList.find((c) => String(c.id) === conversazioneIdParam);
+        if (trovata) {
+          setConversazioneAttiva(trovata);
+          return;
+        }
+      }
+
+      if (convList.length > 0 && !conversazioneAttiva) {
+        setConversazioneAttiva(convList[0]);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -127,6 +151,8 @@ function ChatContent() {
       return;
     }
 
+    let isSubscribed = true;
+
     const caricaMessaggi = async () => {
       const { data } = await supabase
         .from('messaggi')
@@ -134,9 +160,9 @@ function ChatContent() {
         .eq('conversazione_id', conversazioneAttiva.id)
         .order('created_at', { ascending: true });
 
-      if (data) {
+      if (data && isSubscribed) {
         setMessaggi(data as Messaggio[]);
-        setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
       }
     };
 
@@ -153,13 +179,23 @@ function ChatContent() {
           filter: `conversazione_id=eq.${conversazioneAttiva.id}`,
         },
         (payload) => {
-          setMessaggi((prev) => [...prev, payload.new as Messaggio]);
-          setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          const nuovoMsg = payload.new as Messaggio;
+          setMessaggi((prev) => {
+            // Evita duplicati se già mostrato in modo ottimistico
+            if (prev.some((m) => m.id === nuovoMsg.id || (m.mittente_id === nuovoMsg.mittente_id && m.testo === nuovoMsg.testo && m.id.startsWith('temp-')))) {
+              return prev.map((m) =>
+                m.testo === nuovoMsg.testo && m.id.startsWith('temp-') ? nuovoMsg : m
+              );
+            }
+            return [...prev, nuovoMsg];
+          });
+          setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
         }
       )
       .subscribe();
 
     return () => {
+      isSubscribed = false;
       supabase.removeChannel(channel);
     };
   }, [conversazioneAttiva]);
@@ -176,22 +212,43 @@ function ChatContent() {
 
   const utenteAttualeBloccato = utentiBloccati.includes(idControparte);
 
+  // Invio istantaneo (Optimistic UI)
   const inviaMessaggio = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuovoTesto.trim() || !conversazioneAttiva || utenteAttualeBloccato) return;
+    const testo = nuovoTesto.trim();
+    if (!testo || !conversazioneAttiva || utenteAttualeBloccato) return;
 
-    const payload = {
+    const tempId = `temp-${Date.now()}`;
+    const messaggioProvvisorio: Messaggio = {
+      id: tempId,
       conversazione_id: conversazioneAttiva.id,
       mittente_id: mioId,
-      testo: nuovoTesto.trim(),
+      testo: testo,
+      created_at: new Date().toISOString(),
     };
 
+    // 1. Appare istantaneamente a video
+    setMessaggi((prev) => [...prev, messaggioProvvisorio]);
     setNuovoTesto('');
+    setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 10);
 
-    const { data, error } = await supabase.from('messaggi').insert(payload).select().single();
-    if (!error && data) {
-      setMessaggi((prev) => [...prev, data as Messaggio]);
-      setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    // 2. Invio effettivo in background
+    const { data, error } = await supabase
+      .from('messaggi')
+      .insert({
+        conversazione_id: conversazioneAttiva.id,
+        mittente_id: mioId,
+        testo: testo,
+      })
+      .select()
+      .single();
+
+    if (data) {
+      setMessaggi((prev) =>
+        prev.map((m) => (m.id === tempId ? (data as Messaggio) : m))
+      );
+    } else if (error) {
+      console.error('Errore invio messaggio:', error);
     }
   };
 
@@ -223,7 +280,6 @@ function ChatContent() {
   const inviaSegnalazione = async () => {
     if (!conversazioneAttiva || !idControparte) return;
 
-    // 1. Database Supabase
     try {
       await supabase.from('segnalazioni').insert({
         segnalatore_id: mioId,
@@ -233,12 +289,11 @@ function ChatContent() {
         dettagli: dettaglioSegnalazione,
       });
     } catch {
-      // Ignora se la tabella non è ancora presente
+      // Ignora
     }
 
-    // 2. Notifica istantanea Telegram
     try {
-      await fetch('/api/segnala', {
+      fetch('/api/segnala', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -247,9 +302,9 @@ function ChatContent() {
           nicknameSegnalato: nicknameControparte,
           conversazioneId: conversazioneAttiva.id,
         }),
-      });
-    } catch (err) {
-      console.error('Errore invio notifica Telegram:', err);
+      }).catch((err) => console.error('Errore Telegram:', err));
+    } catch {
+      // Ignora
     }
 
     setSegnalazioneInviata(true);
@@ -403,7 +458,7 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Regola di Zena */}
+              {/* Banner Sicurezza Genova */}
               <div className="bg-amber-50/80 border-b border-amber-200/80 px-3 py-1.5 text-[11px] text-amber-900 flex items-center justify-between">
                 <span>🛡️ <strong>Regola di Zena:</strong> incontro sempre di persona in un luogo pubblico del quartiere.</span>
               </div>
