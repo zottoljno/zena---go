@@ -85,13 +85,15 @@ export default function Home() {
   const [nickname, setNickname] = useState('');
   const [filtroQuartiere, setFiltroQuartiere] = useState('Tutti i quartieri');
   const [filtroCategoria, setFiltroCategoria] = useState('Tutte');
+  const [soloPreferiti, setSoloPreferiti] = useState(false);
+  const [preferiti, setPreferiti] = useState<number[]>([]);
   const [ricerca, setRicerca] = useState('');
   const [nonLettiTotali, setNonLettiTotali] = useState(0);
 
   useEffect(() => {
     let montato = true;
 
-    // Cache istantanea locale
+    // Cache e preferiti locali
     try {
       const cacheAnnunci = localStorage.getItem('zena_annunci_cache');
       if (cacheAnnunci) {
@@ -103,9 +105,14 @@ export default function Home() {
       }
       const cachedNick = localStorage.getItem('zena_nickname');
       if (cachedNick) setNickname(cachedNick);
+
+      const prefSalvati = localStorage.getItem('zena_preferiti');
+      if (prefSalvati) {
+        setPreferiti(JSON.parse(prefSalvati));
+      }
     } catch {}
 
-    // Sessione e notifiche
+    // Controllo sessione Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && montato) {
         setSessioneUtente(session.user);
@@ -158,6 +165,23 @@ export default function Home() {
     };
   }, []);
 
+  const togglePreferito = (e: React.MouseEvent, id: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    let nuovaLista: number[];
+    if (preferiti.includes(id)) {
+      nuovaLista = preferiti.filter((favId) => favId !== id);
+    } else {
+      nuovaLista = [...preferiti, id];
+    }
+
+    setPreferiti(nuovaLista);
+    try {
+      localStorage.setItem('zena_preferiti', JSON.stringify(nuovaLista));
+    } catch {}
+  };
+
   const handleAzioneProtetta = (destinazione: string) => {
     if (sessioneUtente) {
       router.push(destinazione);
@@ -180,17 +204,18 @@ export default function Home() {
       filtroQuartiere === 'Tutti i quartieri' || a.quartiere === filtroQuartiere;
     const matchCategoria =
       filtroCategoria === 'Tutte' || a.categoria === filtroCategoria;
+    const matchPreferito = !soloPreferiti || preferiti.includes(a.id);
     const matchRicerca =
       !ricerca.trim() ||
       a.titolo.toLowerCase().includes(ricerca.toLowerCase()) ||
       (a.descrizione && a.descrizione.toLowerCase().includes(ricerca.toLowerCase()));
 
-    return matchQuartiere && matchCategoria && matchRicerca;
+    return matchQuartiere && matchCategoria && matchPreferito && matchRicerca;
   });
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
-      {/* Header Genova Blu & Ardesia */}
+      {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -264,7 +289,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero & Barra Ricerca */}
+      {/* Hero & Ricerca */}
       <section className="bg-white border-b border-slate-200 py-5 sm:py-7 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto space-y-4">
           <div>
@@ -276,9 +301,8 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Input Cerca e Filtro Quartiere */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-            <div className="relative sm:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1">
+            <div className="relative sm:col-span-6">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
               <input
                 type="text"
@@ -290,7 +314,7 @@ export default function Home() {
               />
             </div>
 
-            <div className="relative">
+            <div className="relative sm:col-span-4">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">📍</span>
               <select
                 value={filtroQuartiere}
@@ -305,11 +329,25 @@ export default function Home() {
                 ))}
               </select>
             </div>
+
+            {/* Pulsante filtro Preferiti rapido */}
+            <button
+              type="button"
+              onClick={() => setSoloPreferiti(!soloPreferiti)}
+              className={`sm:col-span-2 text-xs font-bold rounded-xl px-3 py-2.5 border transition flex items-center justify-center gap-1.5 shadow-2xs ${
+                soloPreferiti
+                  ? 'bg-red-50 text-red-600 border-red-300 shadow-xs'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+              }`}
+            >
+              <span>{soloPreferiti ? '❤️' : '🤍'}</span>
+              <span>Preferiti ({preferiti.length})</span>
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Barra Categorie Orizzontale a Pillole */}
+      {/* Pillole Categorie */}
       <section className="bg-white border-b border-slate-200/80 sticky top-[57px] z-20 backdrop-blur-md bg-white/95">
         <div className="max-w-6xl mx-auto px-4 py-2.5">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
@@ -347,21 +385,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Bacheca Annunci */}
+      {/* Bacheca */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
         <div className="flex items-center justify-between mb-4">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            {filtroCategoria === 'Tutte' ? 'Tutti gli annunci' : filtroCategoria}
+            {soloPreferiti
+              ? 'I tuoi annunci preferiti'
+              : filtroCategoria === 'Tutte'
+              ? 'Tutti gli annunci'
+              : filtroCategoria}
             <span className="text-slate-400 font-normal lowercase ml-1">
               ({annunciFiltrati.length} disponibili)
             </span>
           </div>
 
-          {(filtroCategoria !== 'Tutte' || filtroQuartiere !== 'Tutti i quartieri' || ricerca) && (
+          {(filtroCategoria !== 'Tutte' || filtroQuartiere !== 'Tutti i quartieri' || soloPreferiti || ricerca) && (
             <button
               onClick={() => {
                 setFiltroCategoria('Tutte');
                 setFiltroQuartiere('Tutti i quartieri');
+                setSoloPreferiti(false);
                 setRicerca('');
               }}
               className="text-xs text-blue-800 hover:underline font-semibold"
@@ -375,100 +418,124 @@ export default function Home() {
           <div className="text-center py-16 text-slate-400 text-sm">Caricamento bacheca...</div>
         ) : annunciFiltrati.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8 shadow-xs space-y-3">
-            <p className="text-3xl">📦</p>
-            <h3 className="font-bold text-slate-900 text-base">Nessun oggetto trovato</h3>
+            <p className="text-3xl">{soloPreferiti ? '❤️' : '📦'}</p>
+            <h3 className="font-bold text-slate-900 text-base">
+              {soloPreferiti ? 'Nessun annuncio tra i preferiti' : 'Nessun oggetto trovato'}
+            </h3>
             <p className="text-xs text-slate-500">
-              Non ci sono annunci per questa categoria o quartiere. Prova ad azzerare i filtri o pubblica tu per primo!
+              {soloPreferiti
+                ? 'Clicca sul cuoricino degli annunci che ti interessano per ritrovarli qui al volo!'
+                : 'Prova ad azzerare i filtri o pubblica tu per primo!'}
             </p>
-            <button
-              onClick={() => handleAzioneProtetta('/pubblica')}
-              className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition shadow-xs"
-            >
-              + Pubblica un annuncio
-            </button>
+            {soloPreferiti ? (
+              <button
+                onClick={() => setSoloPreferiti(false)}
+                className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition shadow-xs"
+              >
+                Esplora tutta la bacheca
+              </button>
+            ) : (
+              <button
+                onClick={() => handleAzioneProtetta('/pubblica')}
+                className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition shadow-xs"
+              >
+                + Pubblica un annuncio
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {annunciFiltrati.map((item) => (
-              <div
-                key={item.id}
-                className={`bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between group ${
-                  item.venduto ? 'opacity-85' : ''
-                }`}
-              >
-                <Link href={`/annuncio/${item.id}`} className="block flex-1">
-                  <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
-                    {item.immagini && item.immagini.length > 0 ? (
-                      <img
-                        src={item.immagini[0]}
-                        alt={item.titolo}
-                        loading="lazy"
-                        className={`w-full h-full object-cover transition duration-300 ${
-                          item.venduto ? 'grayscale-[30%]' : 'group-hover:scale-103'
+            {annunciFiltrati.map((item) => {
+              const isFav = preferiti.includes(item.id);
+
+              return (
+                <div
+                  key={item.id}
+                  className={`bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between group ${
+                    item.venduto ? 'opacity-85' : ''
+                  }`}
+                >
+                  <Link href={`/annuncio/${item.id}`} className="block flex-1 relative">
+                    <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
+                      {item.immagini && item.immagini.length > 0 ? (
+                        <img
+                          src={item.immagini[0]}
+                          alt={item.titolo}
+                          loading="lazy"
+                          className={`w-full h-full object-cover transition duration-300 ${
+                            item.venduto ? 'grayscale-[30%]' : 'group-hover:scale-103'
+                          }`}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
+                          <span className="text-2xl mb-1">📦</span>
+                          Nessuna foto
+                        </div>
+                      )}
+
+                      {/* Cuoricino Salva Preferito */}
+                      <button
+                        type="button"
+                        onClick={(e) => togglePreferito(e, item.id)}
+                        className={`absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-xs transition shadow-xs z-10 ${
+                          isFav
+                            ? 'bg-red-500 text-white scale-110 shadow-red-500/20'
+                            : 'bg-slate-900/50 hover:bg-slate-900/80 text-white'
                         }`}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
-                        <span className="text-2xl mb-1">📦</span>
-                        Nessuna foto
-                      </div>
-                    )}
+                        title={isFav ? 'Rimuovi dai preferiti' : 'Salva tra i preferiti'}
+                      >
+                        <span className="text-xs">{isFav ? '❤️' : '🤍'}</span>
+                      </button>
 
-                    {/* Badge Categoria sopra la foto */}
-                    {item.categoria && (
-                      <span className="absolute top-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-md">
-                        {item.categoria}
-                      </span>
-                    )}
-
-                    {item.venduto ? (
-                      <span className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center text-white font-black text-xs uppercase tracking-wider">
-                        🤝 Scambiato
-                      </span>
-                    ) : (
-                      <span className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
-                        {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-3.5">
-                    <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-800 transition mb-1">
-                      {item.titolo}
-                    </h2>
-                    <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
-                      <span>📍</span>
-                      <span className="truncate">{item.quartiere}</span>
-                    </p>
-                    {item.descrizione && (
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                        {item.descrizione}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-
-                <div className="p-3.5 pt-0">
-                  {item.venduto ? (
-                    <div className="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl text-center cursor-not-allowed">
-                      Scambio Concluso
+                      {item.venduto ? (
+                        <span className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center text-white font-black text-xs uppercase tracking-wider">
+                          🤝 Scambiato
+                        </span>
+                      ) : (
+                        <span className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
+                          {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        handleAzioneProtetta(
-                          `/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`
-                        )
-                      }
-                      className="w-full bg-slate-900 hover:bg-blue-800 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
-                    >
-                      <span>💬</span>
-                      <span>Scrivi in Chat</span>
-                    </button>
-                  )}
+
+                    <div className="p-3.5">
+                      <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-800 transition mb-1">
+                        {item.titolo}
+                      </h2>
+                      <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
+                        <span>📍</span>
+                        <span className="truncate">{item.quartiere}</span>
+                      </p>
+                      {item.descrizione && (
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          {item.descrizione}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+
+                  <div className="p-3.5 pt-0">
+                    {item.venduto ? (
+                      <div className="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl text-center cursor-not-allowed">
+                        Scambio Concluso
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          handleAzioneProtetta(
+                            `/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`
+                          )
+                        }
+                        className="w-full bg-slate-900 hover:bg-blue-800 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
+                      >
+                        <span>💬</span>
+                        <span>Scrivi in Chat</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
