@@ -13,6 +13,7 @@ interface Annuncio {
   luogo_ritiro?: string;
   descrizione?: string;
   immagini?: string[];
+  venduto?: boolean;
   created_at?: string;
   user_id?: string;
 }
@@ -144,7 +145,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       {/* Header Genova Blu & Ardesia */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
@@ -226,7 +227,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Badge vantaggi stile elegante */}
           <div className="flex flex-wrap gap-2 pt-1">
             <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
               🤝 Scambio a mano
@@ -290,7 +290,9 @@ export default function Home() {
             {annunciFiltrati.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between group"
+                className={`bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between group ${
+                  item.venduto ? 'opacity-85' : ''
+                }`}
               >
                 <Link href={`/annuncio/${item.id}`} className="block flex-1">
                   <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
@@ -298,7 +300,9 @@ export default function Home() {
                       <img
                         src={item.immagini[0]}
                         alt={item.titolo}
-                        className="w-full h-full object-cover group-hover:scale-103 transition duration-300"
+                        className={`w-full h-full object-cover transition duration-300 ${
+                          item.venduto ? 'grayscale-[30%]' : 'group-hover:scale-103'
+                        }`}
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
@@ -306,15 +310,24 @@ export default function Home() {
                         Nessuna foto
                       </div>
                     )}
-                    <span className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
-                      {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
-                    </span>
+
+                    {item.venduto ? (
+                      <span className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center text-white font-black text-xs uppercase tracking-wider">
+                        🤝 Scambiato
+                      </span>
+                    ) : (
+                      <span className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
+                        {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-3.5">
-                    <h2 className="font-bold text-slate-900 text-sm line-clamp-1 mb-1 group-hover:text-blue-800 transition">
-                      {item.titolo}
-                    </h2>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-800 transition">
+                        {item.titolo}
+                      </h2>
+                    </div>
                     <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
                       <span>📍</span>
                       <span className="truncate">{item.quartiere}</span>
@@ -328,17 +341,23 @@ export default function Home() {
                 </Link>
 
                 <div className="p-3.5 pt-0">
-                  <button
-                    onClick={() =>
-                      handleAzioneProtetta(
-                        `/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`
-                      )
-                    }
-                    className="w-full bg-slate-900 hover:bg-blue-800 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
-                  >
-                    <span>💬</span>
-                    <span>Scrivi in Chat</span>
-                  </button>
+                  {item.venduto ? (
+                    <div className="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl text-center cursor-not-allowed">
+                      Scambio Concluso
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        handleAzioneProtetta(
+                          `/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`
+                        )
+                      }
+                      className="w-full bg-slate-900 hover:bg-blue-800 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <span>💬</span>
+                      <span>Scrivi in Chat</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
