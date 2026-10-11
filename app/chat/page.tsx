@@ -47,7 +47,7 @@ function ChatContent() {
   const [conversazioneAttiva, setConversazioneAttiva] = useState<Conversazione | null>(null);
   const [messaggi, setMessaggi] = useState<Messaggio[]>([]);
   const [nuovoTesto, setNuovoTesto] = useState('');
-  const [caricamento, setCaricamento] = useState(true);
+  const [caricamento, setCaricamento] = useState(false);
 
   const [profiliMap, setProfiliMap] = useState<Record<string, string>>({});
   const [menuSicurezzaAperto, setMenuSicurezzaAperto] = useState(false);
@@ -63,20 +63,33 @@ function ChatContent() {
   useEffect(() => {
     let montato = true;
 
-    const init = async () => {
-      const idLocale = typeof window !== 'undefined' ? localStorage.getItem('zena_user_id') : null;
-      if (idLocale && montato) {
-        setMioId(idLocale);
-        const salvati = localStorage.getItem(`zena_bloccati_${idLocale}`);
-        if (salvati) {
-          try {
-            setUtentiBloccati(JSON.parse(salvati));
-          } catch {
-            setUtentiBloccati([]);
+    // 1. CARICAMENTO ISTANTANEO DA CACHE (0 ms)
+    const idLocale = typeof window !== 'undefined' ? localStorage.getItem('zena_user_id') : null;
+    if (idLocale) {
+      setMioId(idLocale);
+      try {
+        const cachedConv = localStorage.getItem(`zena_conv_cache_${idLocale}`);
+        if (cachedConv) {
+          const parsed = JSON.parse(cachedConv);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setConversazioni(parsed);
+            if (!conversazioneAttiva) {
+              setConversazioneAttiva(parsed[0]);
+            }
           }
         }
-      }
+        const cachedProfili = localStorage.getItem('zena_profili_cache');
+        if (cachedProfili) setProfiliMap(JSON.parse(cachedProfili));
 
+        const salvati = localStorage.getItem(`zena_bloccati_${idLocale}`);
+        if (salvati) setUtentiBloccati(JSON.parse(salvati));
+      } catch {}
+    } else {
+      setCaricamento(true);
+    }
+
+    // 2. SINCRONIZZAZIONE DI RETE IN BACKGROUND
+    const sincronizza = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.replace('/login?redirect=/chat');
@@ -90,7 +103,7 @@ function ChatContent() {
       if (montato) setCaricamento(false);
     };
 
-    init();
+    sincronizza();
 
     return () => {
       montato = false;
@@ -105,33 +118,28 @@ function ChatContent() {
         .or(`compratore_id.eq.${uid},venditore_id.eq.${uid}`)
         .order('created_at', { ascending: false });
 
-      if (error || !convData) {
-        setConversazioni([]);
-        return;
-      }
+      if (error || !convData) return;
 
       const convList = convData as unknown as Conversazione[];
+      setConversazioni(convList);
 
-      const { data: messaggiNonLetti } = await supabase
-        .from('messaggi')
-        .select('conversazione_id')
-        .neq('mittente_id', uid)
-        .eq('letto', false);
+      // Salva in cache subito per la prossima apertura
+      try {
+        localStorage.setItem(`zena_conv_cache_${uid}`, JSON.stringify(convList));
+      } catch {}
 
-      const conteggioMap: Record<string, number> = {};
-      if (messaggiNonLetti) {
-        messaggiNonLetti.forEach((m) => {
-          conteggioMap[m.conversazione_id] = (conteggioMap[m.conversazione_id] || 0) + 1;
-        });
+      // Seleziona la chat desiderata
+      if (conversazioneIdParam) {
+        const trovata = convList.find((c) => String(c.id) === conversazioneIdParam);
+        if (trovata) {
+          setConversazioneAttiva(trovata);
+          setVistaMobile('chat');
+        }
+      } else if (convList.length > 0 && !conversazioneAttiva) {
+        setConversazioneAttiva(convList[0]);
       }
 
-      const convConConteggi = convList.map((c) => ({
-        ...c,
-        non_letti: conteggioMap[c.id] || 0,
-      }));
-
-      setConversazioni(convConConteggi);
-
+      // Nickname controparti in background
       const idsToFetch = new Set<string>();
       convList.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
@@ -149,28 +157,22 @@ function ChatContent() {
               profData.forEach((p) => {
                 if (p.id && p.nickname) mappa[p.id] = p.nickname;
               });
-              setProfiliMap(mappa);
+              setProfiliMap((prev) => {
+                const unione = { ...prev, ...mappa };
+                try {
+                  localStorage.setItem('zena_profili_cache', JSON.stringify(unione));
+                } catch {}
+                return unione;
+              });
             }
           });
-      }
-
-      if (conversazioneIdParam) {
-        const trovata = convConConteggi.find((c) => String(c.id) === conversazioneIdParam);
-        if (trovata) {
-          setConversazioneAttiva(trovata);
-          setVistaMobile('chat');
-          return;
-        }
-      }
-
-      if (convConConteggi.length > 0 && !conversazioneAttiva) {
-        setConversazioneAttiva(convConConteggi[0]);
       }
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Caricamento messaggi + Realtime
   useEffect(() => {
     if (!conversazioneAttiva || !mioId) {
       setMessaggi([]);
@@ -179,18 +181,15 @@ function ChatContent() {
 
     let isSubscribed = true;
 
-    const segnaComeLetti = async () => {
-      await supabase
-        .from('messaggi')
-        .update({ letto: true })
-        .eq('conversazione_id', conversazioneAttiva.id)
-        .neq('mittente_id', mioId)
-        .eq('letto', false);
-
-      setConversazioni((prev) =>
-        prev.map((c) => (c.id === conversazioneAttiva.id ? { ...c, non_letti: 0 } : c))
-      );
-    };
+    // Cache messaggi per chat specifica (apertura istantanea)
+    try {
+      const cacheKey = `zena_msg_${conversazioneAttiva.id}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setMessaggi(JSON.parse(cached));
+        setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
+      }
+    } catch {}
 
     const caricaMessaggi = async () => {
       const { data } = await supabase
@@ -200,10 +199,25 @@ function ChatContent() {
         .order('created_at', { ascending: true });
 
       if (data && isSubscribed) {
-        setMessaggi(data as Messaggio[]);
+        const msgs = data as Messaggio[];
+        setMessaggi(msgs);
+        try {
+          localStorage.setItem(`zena_msg_${conversazioneAttiva.id}`, JSON.stringify(msgs));
+        } catch {}
         setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
+
+        // Segna come letti in background solo se necessario
+        const daLeggere = msgs.some((m) => m.mittente_id !== mioId && !m.letto);
+        if (daLeggere) {
+          supabase
+            .from('messaggi')
+            .update({ letto: true })
+            .eq('conversazione_id', conversazioneAttiva.id)
+            .neq('mittente_id', mioId)
+            .eq('letto', false)
+            .then(() => {});
+        }
       }
-      segnaComeLetti();
     };
 
     caricaMessaggi();
@@ -236,9 +250,6 @@ function ChatContent() {
             }
             return [...prev, nuovoMsg];
           });
-          if (nuovoMsg.mittente_id !== mioId) {
-            segnaComeLetti();
-          }
           setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
         }
       )
@@ -248,7 +259,7 @@ function ChatContent() {
       isSubscribed = false;
       supabase.removeChannel(channel);
     };
-  }, [conversazioneAttiva, mioId]);
+  }, [conversazioneAttiva?.id, mioId]);
 
   const idControparte = conversazioneAttiva
     ? conversazioneAttiva.compratore_id === mioId
@@ -390,7 +401,6 @@ function ChatContent() {
 
       {/* Main Container */}
       <main className="max-w-6xl w-full mx-auto p-2 sm:p-4 flex-1 flex flex-col md:flex-row gap-3 h-[calc(100vh-57px)]">
-        
         {/* Colonna Sinistra: Lista Chat */}
         <aside
           className={`w-full md:w-80 bg-white/95 rounded-2xl border border-sky-100 shadow-xs flex flex-col overflow-hidden shrink-0 transition-all ${
@@ -407,7 +417,7 @@ function ChatContent() {
           </div>
 
           <div className="flex-1 overflow-y-auto divide-y divide-sky-50">
-            {caricamento ? (
+            {caricamento && conversazioni.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400 space-y-2">
                 <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                 <p>Caricamento messaggi...</p>
@@ -433,7 +443,7 @@ function ChatContent() {
                       setConversazioneAttiva(c);
                       setVistaMobile('chat');
                     }}
-                    className={`w-full text-left p-3.5 flex items-center gap-3 transition relative group ${
+                    className={`w-full text-left p-3.5 flex items-center gap-3 transition relative group cursor-pointer ${
                       isSelected
                         ? 'bg-blue-50/80 border-l-4 border-blue-600'
                         : 'hover:bg-sky-50/50'
@@ -452,15 +462,9 @@ function ChatContent() {
                         <span className="font-semibold text-xs text-slate-900 truncate group-hover:text-blue-700 transition">
                           {partnerNick}
                         </span>
-                        {c.non_letti !== undefined && c.non_letti > 0 ? (
-                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-4 text-center">
-                            {c.non_letti}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {c.annunci?.prezzo === 0 ? 'Gratis' : `${c.annunci?.prezzo} €`}
-                          </span>
-                        )}
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {c.annunci?.prezzo === 0 ? 'Gratis' : `${c.annunci?.prezzo} €`}
+                        </span>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate font-normal">
                         {c.annunci?.titolo || 'Trattativa in corso'}
@@ -487,7 +491,7 @@ function ChatContent() {
                   <button
                     type="button"
                     onClick={() => setVistaMobile('lista')}
-                    className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 rounded-lg"
+                    className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 rounded-lg cursor-pointer"
                     title="Torna all'elenco"
                   >
                     ←
@@ -525,7 +529,7 @@ function ChatContent() {
                   <button
                     type="button"
                     onClick={() => setMenuSicurezzaAperto(!menuSicurezzaAperto)}
-                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-sky-50 rounded-xl transition font-bold text-sm"
+                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-sky-50 rounded-xl transition font-bold text-sm cursor-pointer"
                     title="Opzioni sicurezza"
                   >
                     ⋮
@@ -539,7 +543,7 @@ function ChatContent() {
                           setMenuSicurezzaAperto(false);
                           setModalSegnalaAperto(true);
                         }}
-                        className="w-full text-left px-3 py-2 text-slate-700 hover:bg-sky-50 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-slate-700 hover:bg-sky-50 flex items-center gap-2 cursor-pointer"
                       >
                         <span>🚩</span> Segnala utente
                       </button>
@@ -548,7 +552,7 @@ function ChatContent() {
                         <button
                           type="button"
                           onClick={sbloccaUtente}
-                          className="w-full text-left px-3 py-2 text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-semibold"
+                          className="w-full text-left px-3 py-2 text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-semibold cursor-pointer"
                         >
                           <span>🔓</span> Sblocca utente
                         </button>
@@ -556,7 +560,7 @@ function ChatContent() {
                         <button
                           type="button"
                           onClick={bloccaUtente}
-                          className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold"
+                          className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold cursor-pointer"
                         >
                           <span>🚫</span> Blocca utente
                         </button>
@@ -566,9 +570,8 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Area Messaggi: SFONDO AZZURRINO SFUMATO */}
+              {/* Area Messaggi con Sfondo Azzurrino Sfumato */}
               <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-blue-50/30">
-                {/* Banner Scambio Sicuro */}
                 <div className="bg-white/80 backdrop-blur-xs border border-sky-100 rounded-xl p-2 text-[11px] text-sky-900 flex items-center justify-center gap-1.5 text-center shadow-2xs">
                   <span>🛡️</span>
                   <span>
@@ -633,7 +636,7 @@ function ChatContent() {
                       key={idx}
                       type="button"
                       onClick={() => inviaMessaggio(undefined, chip)}
-                      className="whitespace-nowrap text-[11px] font-medium bg-sky-50/80 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1 rounded-full border border-sky-100 transition shrink-0"
+                      className="whitespace-nowrap text-[11px] font-medium bg-sky-50/80 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1 rounded-full border border-sky-100 transition shrink-0 cursor-pointer"
                     >
                       {chip}
                     </button>
@@ -645,7 +648,7 @@ function ChatContent() {
               {utenteAttualeBloccato ? (
                 <div className="p-3 bg-red-50 border-t border-red-200 text-center text-xs text-red-700 flex items-center justify-center gap-2">
                   <span>🚫 Hai bloccato {nicknameControparte}.</span>
-                  <button onClick={sbloccaUtente} className="underline font-bold hover:text-red-900">
+                  <button onClick={sbloccaUtente} className="underline font-bold hover:text-red-900 cursor-pointer">
                     Sblocca
                   </button>
                 </div>
@@ -691,7 +694,7 @@ function ChatContent() {
               <button
                 type="button"
                 onClick={() => setModalSegnalaAperto(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -737,14 +740,14 @@ function ChatContent() {
                   <button
                     type="button"
                     onClick={() => setModalSegnalaAperto(false)}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-xl"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-xl cursor-pointer"
                   >
                     Annulla
                   </button>
                   <button
                     type="button"
                     onClick={inviaSegnalazione}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-xs"
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-xs cursor-pointer"
                   >
                     Invia Segnalazione
                   </button>
