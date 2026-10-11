@@ -85,8 +85,23 @@ export default function Home() {
   useEffect(() => {
     let montato = true;
 
-    const controllaSessione = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    // 1. CARICAMENTO ISTANTANEO DALLA CACHE LOCALE (0ms)
+    try {
+      const cacheAnnunci = localStorage.getItem('zena_annunci_cache');
+      if (cacheAnnunci) {
+        const parsed = JSON.parse(cacheAnnunci);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAnnunci(parsed);
+          setCaricamento(false); // Mostra subito le card, zero attese!
+        }
+      }
+
+      const cachedNick = localStorage.getItem('zena_nickname');
+      if (cachedNick) setNickname(cachedNick);
+    } catch {}
+
+    // 2. Controllo Sessione e Notifiche in background
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && montato) {
         setSessioneUtente(session.user);
         const nick =
@@ -97,52 +112,47 @@ export default function Home() {
         localStorage.setItem('zena_user_id', session.user.id);
         localStorage.setItem('zena_nickname', nick);
 
-        // Conta messaggi non letti destinati all'utente corrente
-        try {
-          const { count, error } = await supabase
-            .from('messaggi')
-            .select('id', { count: 'exact', head: true })
-            .neq('mittente_id', session.user.id)
-            .eq('letto', false);
+        supabase
+          .from('messaggi')
+          .select('id', { count: 'exact', head: true })
+          .neq('mittente_id', session.user.id)
+          .eq('letto', false)
+          .then(({ count }) => {
+            if (count && montato) setNonLettiTotali(count);
+          });
+      }
+    });
 
-          if (!error && count && montato) {
-            setNonLettiTotali(count);
-          }
-        } catch (err) {
-          console.error('Errore conteggio messaggi non letti:', err);
+    // 3. Query snella su Supabase in background
+    const scaricaDatiFreschi = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('annunci')
+          .select('id, titolo, prezzo, quartiere, immagini, venduto, created_at, user_id, descrizione')
+          .order('created_at', { ascending: false });
+
+        if (!montato) return;
+
+        if (!error && data) {
+          const lista = data as Annuncio[];
+          setAnnunci(lista);
+          try {
+            localStorage.setItem('zena_annunci_cache', JSON.stringify(lista));
+          } catch {}
         }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (montato) setCaricamento(false);
       }
     };
 
-    controllaSessione();
-    caricaAnnunci();
+    scaricaDatiFreschi();
 
     return () => {
       montato = false;
     };
   }, []);
-
-  const caricaAnnunci = async () => {
-    setCaricamento(true);
-    try {
-      const { data, error } = await supabase
-        .from('annunci')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Errore nel recupero annunci:', error);
-        setAnnunci([]);
-      } else if (data) {
-        setAnnunci(data as Annuncio[]);
-      }
-    } catch (err) {
-      console.error(err);
-      setAnnunci([]);
-    } finally {
-      setCaricamento(false);
-    }
-  };
 
   const handleAzioneProtetta = (destinazione: string) => {
     if (sessioneUtente) {
@@ -304,7 +314,7 @@ export default function Home() {
 
       {/* Bacheca Annunci */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
-        {caricamento ? (
+        {caricamento && annunci.length === 0 ? (
           <div className="text-center py-16 text-slate-400 text-sm">Caricamento bacheca...</div>
         ) : annunciFiltrati.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8 shadow-xs">
@@ -335,6 +345,7 @@ export default function Home() {
                       <img
                         src={item.immagini[0]}
                         alt={item.titolo}
+                        loading="lazy"
                         className={`w-full h-full object-cover transition duration-300 ${
                           item.venduto ? 'grayscale-[30%]' : 'group-hover:scale-103'
                         }`}
