@@ -58,13 +58,22 @@ function ChatContent() {
   const [utentiBloccati, setUtentiBloccati] = useState<string[]>([]);
   const [vistaMobile, setVistaMobile] = useState<'lista' | 'chat'>('lista');
 
-  const fineMessaggiRef = useRef<HTMLDivElement>(null);
+  // Ref collegato ESCLUSIVAMENTE al box interno dei messaggi (la pagina resta ferma)
+  const contenitoreMessaggiRef = useRef<HTMLDivElement>(null);
+
+  const scorriInBasso = (smooth = true) => {
+    if (contenitoreMessaggiRef.current) {
+      contenitoreMessaggiRef.current.scrollTo({
+        top: contenitoreMessaggiRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  };
 
   useEffect(() => {
     let montato = true;
 
     const inizializza = async () => {
-      // 1. Sessione utente
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.replace('/login?redirect=/chat');
@@ -74,7 +83,6 @@ function ChatContent() {
       const uid = session.user.id;
       if (montato) setMioId(uid);
 
-      // Bloccati locali
       const salvati = localStorage.getItem(`zena_bloccati_${uid}`);
       if (salvati) {
         try {
@@ -82,7 +90,6 @@ function ChatContent() {
         } catch {}
       }
 
-      // 2. Chiamata veloce in parallelo
       await caricaConversazioni(uid);
       if (montato) setCaricamento(false);
     };
@@ -96,7 +103,7 @@ function ChatContent() {
 
   const caricaConversazioni = async (uid: string) => {
     try {
-      // Due query mirate in parallelo: sfruttano gli indici ed evitano la lentezza del .or()
+      // Due query mirate in parallelo con indici dedicati (eliminano la lentezza del .or)
       const [resCompratore, resVenditore] = await Promise.all([
         supabase
           .from('conversazioni')
@@ -115,7 +122,6 @@ function ChatContent() {
         ...(resVenditore.data || []),
       ] as unknown as Conversazione[];
 
-      // Elimina eventuali duplicati e ordina per data
       const convUniche = Array.from(new Map(lista.map((c) => [c.id, c])).values()).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
@@ -132,7 +138,6 @@ function ChatContent() {
         setConversazioneAttiva(convUniche[0]);
       }
 
-      // Recupera i nickname senza bloccare l'interfaccia
       const idsToFetch = new Set<string>();
       convUniche.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
@@ -161,7 +166,6 @@ function ChatContent() {
     }
   };
 
-  // Caricamento messaggi della chat attiva
   useEffect(() => {
     if (!conversazioneAttiva || !mioId) {
       setMessaggi([]);
@@ -180,9 +184,9 @@ function ChatContent() {
       if (data && isSubscribed) {
         const msgs = data as Messaggio[];
         setMessaggi(msgs);
-        setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
+        // Scorre solo il box interno senza toccare la finestra del browser
+        setTimeout(() => scorriInBasso(false), 30);
 
-        // Segna come letti in background
         const daLeggere = msgs.some((m) => m.mittente_id !== mioId && !m.letto);
         if (daLeggere) {
           supabase
@@ -226,7 +230,7 @@ function ChatContent() {
             }
             return [...prev, nuovoMsg];
           });
-          setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
+          setTimeout(() => scorriInBasso(true), 30);
         }
       )
       .subscribe();
@@ -266,7 +270,7 @@ function ChatContent() {
 
     setMessaggi((prev) => [...prev, messaggioProvvisorio]);
     setNuovoTesto('');
-    setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 10);
+    setTimeout(() => scorriInBasso(true), 10);
 
     const { data, error } = await supabase
       .from('messaggi')
@@ -348,7 +352,7 @@ function ChatContent() {
 
   return (
     <div className="min-h-screen bg-sky-50/50 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
-      {/* Top Navbar */}
+      {/* Top Navbar fissa */}
       <header className="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <Link
@@ -546,8 +550,11 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Area Messaggi con Sfondo Azzurrino */}
-              <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-blue-50/30">
+              {/* Area Messaggi: SCORRE SOLO QUESTO BOX, LA PAGINA ESTERNA NON SI MUOVE */}
+              <div
+                ref={contenitoreMessaggiRef}
+                className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-blue-50/30"
+              >
                 <div className="bg-white/80 backdrop-blur-xs border border-sky-100 rounded-xl p-2 text-[11px] text-sky-900 flex items-center justify-center gap-1.5 text-center shadow-2xs">
                   <span>🛡️</span>
                   <span>
@@ -601,7 +608,6 @@ function ChatContent() {
                     );
                   })
                 )}
-                <div ref={fineMessaggiRef} />
               </div>
 
               {/* Risposte Rapide */}
