@@ -21,16 +21,16 @@ interface Annuncio {
 }
 
 const CATEGORIE = [
-  { id: 'Tutte', label: 'Tutte le categorie', icon: '✨' },
-  { id: 'Fumetti & Manga', label: 'Fumetti & Manga', icon: '📚' },
-  { id: 'Videogiochi & Console', label: 'Videogiochi & Console', icon: '🎮' },
-  { id: 'Cinema & DVD', label: 'Cinema & DVD', icon: '🎬' },
-  { id: 'Collezionismo & LEGO', label: 'Collezionismo & LEGO', icon: '🧱' },
-  { id: 'Informatica & Telefonia', label: 'Informatica & Telefonia', icon: '💻' },
-  { id: 'Abbigliamento', label: 'Abbigliamento', icon: '👕' },
-  { id: 'Casa & Arredamento', label: 'Casa & Arredo', icon: '🏠' },
-  { id: 'Sport & Bici', label: 'Sport & Bici', icon: '🚲' },
-  { id: 'Altro', label: 'Altro', icon: '📦' },
+  { id: 'Tutte', label: 'Tutti' },
+  { id: 'Fumetti & Manga', label: 'Fumetti & Manga' },
+  { id: 'Videogiochi & Console', label: 'Videogiochi' },
+  { id: 'Cinema & DVD', label: 'Cinema & Film' },
+  { id: 'Collezionismo & LEGO', label: 'Collezionismo' },
+  { id: 'Informatica & Telefonia', label: 'Tecnologia' },
+  { id: 'Abbigliamento', label: 'Abbigliamento' },
+  { id: 'Casa & Arredamento', label: 'Casa' },
+  { id: 'Sport & Bici', label: 'Sport' },
+  { id: 'Altro', label: 'Altro' },
 ];
 
 const QUARTIERI_GENOVA = [
@@ -94,7 +94,6 @@ export default function HomePage() {
   useEffect(() => {
     let montato = true;
 
-    // Cache e preferiti locali per rendering immediato a 0ms
     try {
       const prefSalvati = localStorage.getItem('zena_preferiti');
       if (prefSalvati) setPreferiti(JSON.parse(prefSalvati));
@@ -111,7 +110,6 @@ export default function HomePage() {
       if (cachedNick) setNickname(cachedNick);
     } catch {}
 
-    // Controllo sessione in background (non bloccante)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && montato) {
         setSessioneUtente(session.user);
@@ -213,41 +211,40 @@ export default function HomePage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50/70 via-sky-50/30 to-blue-50/40 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
-      {/* Banner Installa App PWA */}
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans text-slate-900 antialiased">
       <InstallPrompt />
 
-      {/* Header Genova Luminoso & Azzurrato */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/90 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">
-              Zena <span className="text-blue-600">&amp;</span> Go
-            </span>
-            <span className="hidden sm:inline-block text-[11px] bg-sky-50 text-sky-800 font-bold px-2 py-0.5 rounded-full border border-sky-200/80">
+      {/* Header Minimale */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-xl font-black tracking-tight text-slate-950 flex items-center gap-1.5">
+              <span>Zena</span>
+              <span className="text-slate-400 font-light">&amp;</span>
+              <span>Go</span>
+            </Link>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 border border-slate-200 px-2 py-0.5 rounded-full">
               Genova
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {sessioneUtente ? (
               <>
                 <Link
                   href="/profilo"
-                  className="text-xs font-semibold text-slate-700 hover:text-blue-700 bg-sky-50/80 hover:bg-sky-100 border border-sky-200/80 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
+                  className="text-xs font-medium text-slate-700 hover:text-slate-950 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
                 >
-                  <span>👤</span>
-                  <span>{nickname}</span>
+                  {nickname}
                 </Link>
 
                 <button
                   onClick={() => handleAzioneProtetta('/chat')}
-                  className="relative flex items-center gap-1.5 text-xs font-semibold bg-sky-50/80 hover:bg-sky-100 text-slate-800 px-3 py-1.5 rounded-xl transition border border-sky-200/80 cursor-pointer"
+                  className="relative text-xs font-medium text-slate-700 hover:text-slate-950 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer flex items-center gap-1"
                 >
-                  <span>💬</span>
-                  <span className="hidden sm:inline">Messaggi</span>
+                  <span>Messaggi</span>
                   {nonLettiTotali > 0 && (
-                    <span className="bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center leading-tight">
+                    <span className="bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-4 text-center">
                       {nonLettiTotali}
                     </span>
                   )}
@@ -255,15 +252,14 @@ export default function HomePage() {
 
                 <button
                   onClick={() => handleAzioneProtetta('/pubblica')}
-                  className="flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs cursor-pointer"
+                  className="bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-xs cursor-pointer ml-1"
                 >
-                  <span>+</span>
-                  <span>Pubblica</span>
+                  + Vendi o Regala
                 </button>
 
                 <button
                   onClick={disconnetti}
-                  className="text-xs text-slate-400 hover:text-red-600 p-1 transition cursor-pointer"
+                  className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 transition cursor-pointer"
                   title="Esci"
                 >
                   Esci
@@ -271,58 +267,53 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <button
-                  onClick={() => handleAzioneProtetta('/pubblica')}
-                  className="flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs cursor-pointer"
-                >
-                  <span>+</span>
-                  <span>Pubblica</span>
-                </button>
-
                 <Link
                   href="/login"
-                  className="text-xs font-bold bg-slate-900 hover:bg-black text-white px-3.5 py-1.5 rounded-xl transition"
+                  className="text-xs font-medium text-slate-600 hover:text-slate-950 px-3 py-1.5 rounded-lg transition"
                 >
                   Accedi
                 </Link>
+
+                <button
+                  onClick={() => handleAzioneProtetta('/pubblica')}
+                  className="bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-xs cursor-pointer"
+                >
+                  Pubblica annuncio
+                </button>
               </>
             )}
           </div>
         </div>
       </header>
 
-      {/* Hero & Ricerca con Tocco Moderno */}
-      <section className="bg-white/80 backdrop-blur-xs border-b border-sky-100 py-6 sm:py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto space-y-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-              Zero commissioni. Zero spedizioni. <span className="text-blue-600">Solo a Genova.</span>
+      {/* Sezione Ricerca & Hero Essenziale */}
+      <section className="bg-white border-b border-slate-200/80 py-8 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto space-y-5">
+          <div className="max-w-xl">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+              Scambi a mano tra quartieri.
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              Compra, vendi e scambia a mano nel tuo quartiere in tutta sicurezza.
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              La bacheca libera di Genova senza intermediari, commissioni o spedizioni.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1">
-            <div className="relative sm:col-span-6">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-400 text-xs">🔍</span>
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
+            <div className="sm:col-span-6 relative">
               <input
                 type="text"
-                placeholder="Cosa cerchi? (es. Batman, DVD, Nintendo, libri...)"
+                placeholder="Cosa cerchi? (es. Lego, DVD, Fumetti, Bicicletta...)"
                 value={ricerca}
                 onChange={(e) => setRicerca(e.target.value)}
-                style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-                className="w-full text-xs border border-sky-200/90 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-slate-900 transition"
               />
             </div>
 
-            <div className="relative sm:col-span-4">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-400 text-xs">📍</span>
+            <div className="sm:col-span-4">
               <select
                 value={filtroQuartiere}
                 onChange={(e) => setFiltroQuartiere(e.target.value)}
-                style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-                className="w-full text-xs border border-sky-200/90 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-slate-900 transition"
               >
                 {QUARTIERI_GENOVA.map((q) => (
                   <option key={q} value={q}>
@@ -335,10 +326,10 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setSoloPreferiti(!soloPreferiti)}
-              className={`sm:col-span-2 text-xs font-bold rounded-xl px-3 py-2.5 border transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer ${
+              className={`sm:col-span-2 text-xs font-semibold rounded-lg px-3 py-2.5 border transition cursor-pointer flex items-center justify-center gap-1.5 ${
                 soloPreferiti
-                  ? 'bg-rose-50 text-rose-600 border-rose-200 shadow-xs'
-                  : 'bg-white hover:bg-sky-50/70 text-slate-700 border-sky-200/90'
+                  ? 'bg-rose-50 border-rose-300 text-rose-700'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
               <span>{soloPreferiti ? '❤️' : '🤍'}</span>
@@ -348,10 +339,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pillole Categorie Traslucide */}
-      <section className="sticky top-[57px] z-20 backdrop-blur-md bg-white/85 border-b border-sky-100">
-        <div className="max-w-6xl mx-auto px-4 py-2.5">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+      {/* Barra Categorie Essenziale */}
+      <section className="bg-white border-b border-slate-200 sticky top-16 z-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {CATEGORIE.map((cat) => {
               const attiva = filtroCategoria === cat.id;
               const conteggio = cat.id === 'Tutte'
@@ -362,18 +353,17 @@ export default function HomePage() {
                 <button
                   key={cat.id}
                   onClick={() => setFiltroCategoria(cat.id)}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                  className={`text-xs px-3 py-1.5 rounded-md transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                     attiva
-                      ? 'bg-blue-600 text-white shadow-xs font-bold scale-102'
-                      : 'bg-white/90 hover:bg-sky-50 text-slate-700 border border-sky-100 hover:border-sky-200'
+                      ? 'bg-slate-900 text-white font-medium'
+                      : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
                   }`}
                 >
-                  <span className="text-sm">{cat.icon}</span>
                   <span>{cat.label}</span>
                   {conteggio > 0 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        attiva ? 'bg-blue-700 text-blue-100' : 'bg-sky-100/70 text-sky-800'
+                      className={`text-[10px] px-1 rounded-sm ${
+                        attiva ? 'bg-slate-800 text-slate-300' : 'text-slate-400'
                       }`}
                     >
                       {conteggio}
@@ -386,19 +376,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Bacheca Annunci su Sfondo Azzurrino */}
-      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            {soloPreferiti
-              ? 'I tuoi annunci preferiti'
-              : filtroCategoria === 'Tutte'
-              ? 'Tutti gli annunci'
-              : filtroCategoria}
-            <span className="text-slate-400 font-normal lowercase ml-1">
-              ({annunciFiltrati.length} disponibili)
-            </span>
-          </div>
+      {/* Griglia Annunci */}
+      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 flex-1">
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            {soloPreferiti ? 'I tuoi preferiti' : filtroCategoria}
+            <span className="font-normal lowercase ml-1">({annunciFiltrati.length})</span>
+          </p>
 
           {(filtroCategoria !== 'Tutte' || filtroQuartiere !== 'Tutti i quartieri' || soloPreferiti || ricerca) && (
             <button
@@ -408,120 +392,86 @@ export default function HomePage() {
                 setSoloPreferiti(false);
                 setRicerca('');
               }}
-              className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
+              className="text-xs text-slate-500 hover:text-slate-900 underline cursor-pointer"
             >
-              Azzera filtri ✕
+              Azzera filtri
             </button>
           )}
         </div>
 
         {caricamento && annunci.length === 0 ? (
-          <div className="text-center py-16 text-slate-400 text-xs space-y-2">
-            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p>Caricamento bacheca...</p>
-          </div>
+          <div className="text-center py-20 text-slate-400 text-xs">Caricamento bacheca...</div>
         ) : annunciFiltrati.length === 0 ? (
-          <div className="bg-white/95 rounded-2xl border border-sky-100 p-10 text-center max-w-md mx-auto my-8 shadow-xs space-y-3">
-            <p className="text-3xl">{soloPreferiti ? '❤️' : '📦'}</p>
-            <h3 className="font-bold text-slate-900 text-base">
-              {soloPreferiti ? 'Nessun annuncio tra i preferiti' : 'Nessun oggetto trovato'}
-            </h3>
-            <p className="text-xs text-slate-500">
-              {soloPreferiti
-                ? 'Clicca sul cuoricino degli annunci che ti interessano per ritrovarli qui al volo!'
-                : 'Prova ad azzerare i filtri o pubblica tu per primo!'}
-            </p>
-            {soloPreferiti ? (
-              <button
-                onClick={() => setSoloPreferiti(false)}
-                className="inline-block bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-xs cursor-pointer"
-              >
-                Esplora tutta la bacheca
-              </button>
-            ) : (
-              <button
-                onClick={() => handleAzioneProtetta('/pubblica')}
-                className="inline-block bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-xs cursor-pointer"
-              >
-                + Pubblica un annuncio
-              </button>
-            )}
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center max-w-sm mx-auto my-8 space-y-3">
+            <p className="text-sm font-semibold text-slate-900">Nessun oggetto trovato</p>
+            <p className="text-xs text-slate-500">Prova a modificare i filtri o la ricerca.</p>
+            <button
+              onClick={() => {
+                setFiltroCategoria('Tutte');
+                setFiltroQuartiere('Tutti i quartieri');
+                setSoloPreferiti(false);
+                setRicerca('');
+              }}
+              className="text-xs font-semibold text-slate-900 underline cursor-pointer"
+            >
+              Mostra tutti gli annunci
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {annunciFiltrati.map((item) => {
               const isFav = preferiti.includes(item.id);
 
               return (
                 <div
                   key={item.id}
-                  className={`bg-white rounded-2xl border border-sky-100/90 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between group ${
-                    item.venduto ? 'opacity-85' : ''
-                  }`}
+                  className="bg-white rounded-xl border border-slate-200/90 overflow-hidden hover:border-slate-300 transition duration-150 flex flex-col justify-between group"
                 >
-                  <Link href={`/annuncio/${item.id}`} className="block flex-1 relative">
-                    <div className="aspect-4/3 bg-sky-50/70 relative overflow-hidden">
+                  <Link href={`/annuncio/${item.id}`} className="block flex-1">
+                    <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
                       {item.immagini && item.immagini.length > 0 ? (
                         <img
                           src={item.immagini[0]}
                           alt={item.titolo}
                           loading="lazy"
-                          className={`w-full h-full object-cover transition duration-300 ${
-                            item.venduto ? 'grayscale-[30%]' : 'group-hover:scale-103'
-                          }`}
+                          className="w-full h-full object-cover group-hover:scale-[1.02] transition duration-300"
                         />
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs">
-                          <span className="text-2xl mb-1">📦</span>
+                        <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs font-medium">
                           Nessuna foto
                         </div>
                       )}
 
-                      {/* Cuoricino Salva Preferito */}
+                      {/* Cuore Preferito */}
                       <button
                         type="button"
                         onClick={(e) => togglePreferito(e, item.id)}
-                        className={`absolute top-2.5 left-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-xs transition shadow-xs z-10 cursor-pointer ${
-                          isFav
-                            ? 'bg-rose-500 text-white scale-110 shadow-rose-500/20'
-                            : 'bg-slate-900/40 hover:bg-slate-900/70 text-white'
-                        }`}
-                        title={isFav ? 'Rimuovi dai preferiti' : 'Salva tra i preferiti'}
+                        className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-slate-700 flex items-center justify-center text-xs shadow-xs transition cursor-pointer"
+                        title={isFav ? 'Rimuovi dai preferiti' : 'Salva nei preferiti'}
                       >
-                        <span className="text-xs">{isFav ? '❤️' : '🤍'}</span>
+                        {isFav ? '❤️' : '🤍'}
                       </button>
 
-                      {item.venduto ? (
-                        <span className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center text-white font-black text-xs uppercase tracking-wider">
-                          🤝 Scambiato
-                        </span>
-                      ) : (
-                        <span className="absolute top-2.5 right-2.5 bg-slate-900/85 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
-                          {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
-                        </span>
-                      )}
+                      {/* Prezzo o Stato */}
+                      <span className="absolute top-2 right-2 bg-slate-950/85 text-white text-[11px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
+                        {item.venduto ? 'Scambiato' : item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
+                      </span>
                     </div>
 
-                    <div className="p-3.5">
-                      <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-600 transition mb-1">
+                    <div className="p-3.5 space-y-1">
+                      <h2 className="font-semibold text-sm text-slate-950 line-clamp-1 group-hover:text-slate-700 transition">
                         {item.titolo}
                       </h2>
-                      <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
-                        <span>📍</span>
-                        <span className="truncate">{item.quartiere}</span>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {item.quartiere}
                       </p>
-                      {item.descrizione && (
-                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                          {item.descrizione}
-                        </p>
-                      )}
                     </div>
                   </Link>
 
                   <div className="p-3.5 pt-0">
                     {item.venduto ? (
-                      <div className="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl text-center cursor-not-allowed">
-                        Scambio Concluso
+                      <div className="w-full bg-slate-50 text-slate-400 text-xs py-2 rounded-lg text-center font-medium">
+                        Concluso
                       </div>
                     ) : (
                       <button
@@ -530,10 +480,9 @@ export default function HomePage() {
                             `/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`
                           )
                         }
-                        className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium py-2 rounded-lg transition cursor-pointer"
                       >
-                        <span>💬</span>
-                        <span>Scrivi in Chat</span>
+                        Contatta
                       </button>
                     )}
                   </div>
