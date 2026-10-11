@@ -47,7 +47,7 @@ function ChatContent() {
   const [conversazioneAttiva, setConversazioneAttiva] = useState<Conversazione | null>(null);
   const [messaggi, setMessaggi] = useState<Messaggio[]>([]);
   const [nuovoTesto, setNuovoTesto] = useState('');
-  const [caricamento, setCaricamento] = useState(false);
+  const [caricamento, setCaricamento] = useState(true);
 
   const [profiliMap, setProfiliMap] = useState<Record<string, string>>({});
   const [menuSicurezzaAperto, setMenuSicurezzaAperto] = useState(false);
@@ -63,33 +63,8 @@ function ChatContent() {
   useEffect(() => {
     let montato = true;
 
-    // 1. CARICAMENTO ISTANTANEO DA CACHE (0 ms)
-    const idLocale = typeof window !== 'undefined' ? localStorage.getItem('zena_user_id') : null;
-    if (idLocale) {
-      setMioId(idLocale);
-      try {
-        const cachedConv = localStorage.getItem(`zena_conv_cache_${idLocale}`);
-        if (cachedConv) {
-          const parsed = JSON.parse(cachedConv);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setConversazioni(parsed);
-            if (!conversazioneAttiva) {
-              setConversazioneAttiva(parsed[0]);
-            }
-          }
-        }
-        const cachedProfili = localStorage.getItem('zena_profili_cache');
-        if (cachedProfili) setProfiliMap(JSON.parse(cachedProfili));
-
-        const salvati = localStorage.getItem(`zena_bloccati_${idLocale}`);
-        if (salvati) setUtentiBloccati(JSON.parse(salvati));
-      } catch {}
-    } else {
-      setCaricamento(true);
-    }
-
-    // 2. SINCRONIZZAZIONE DI RETE IN BACKGROUND
-    const sincronizza = async () => {
+    const inizializza = async () => {
+      // 1. Sessione utente
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.replace('/login?redirect=/chat');
@@ -99,11 +74,20 @@ function ChatContent() {
       const uid = session.user.id;
       if (montato) setMioId(uid);
 
+      // Bloccati locali
+      const salvati = localStorage.getItem(`zena_bloccati_${uid}`);
+      if (salvati) {
+        try {
+          setUtentiBloccati(JSON.parse(salvati));
+        } catch {}
+      }
+
+      // 2. Chiamata veloce in parallelo
       await caricaConversazioni(uid);
       if (montato) setCaricamento(false);
     };
 
-    sincronizza();
+    inizializza();
 
     return () => {
       montato = false;
@@ -112,36 +96,45 @@ function ChatContent() {
 
   const caricaConversazioni = async (uid: string) => {
     try {
-      const { data: convData, error } = await supabase
-        .from('conversazioni')
-        .select('id, annuncio_id, compratore_id, venditore_id, created_at, annunci(titolo, prezzo, quartiere, immagini)')
-        .or(`compratore_id.eq.${uid},venditore_id.eq.${uid}`)
-        .order('created_at', { ascending: false });
+      // Due query mirate in parallelo: sfruttano gli indici ed evitano la lentezza del .or()
+      const [resCompratore, resVenditore] = await Promise.all([
+        supabase
+          .from('conversazioni')
+          .select('id, annuncio_id, compratore_id, venditore_id, created_at, annunci(titolo, prezzo, quartiere, immagini)')
+          .eq('compratore_id', uid)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('conversazioni')
+          .select('id, annuncio_id, compratore_id, venditore_id, created_at, annunci(titolo, prezzo, quartiere, immagini)')
+          .eq('venditore_id', uid)
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (error || !convData) return;
+      const lista = [
+        ...(resCompratore.data || []),
+        ...(resVenditore.data || []),
+      ] as unknown as Conversazione[];
 
-      const convList = convData as unknown as Conversazione[];
-      setConversazioni(convList);
+      // Elimina eventuali duplicati e ordina per data
+      const convUniche = Array.from(new Map(lista.map((c) => [c.id, c])).values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
-      // Salva in cache subito per la prossima apertura
-      try {
-        localStorage.setItem(`zena_conv_cache_${uid}`, JSON.stringify(convList));
-      } catch {}
+      setConversazioni(convUniche);
 
-      // Seleziona la chat desiderata
       if (conversazioneIdParam) {
-        const trovata = convList.find((c) => String(c.id) === conversazioneIdParam);
+        const trovata = convUniche.find((c) => String(c.id) === conversazioneIdParam);
         if (trovata) {
           setConversazioneAttiva(trovata);
           setVistaMobile('chat');
         }
-      } else if (convList.length > 0 && !conversazioneAttiva) {
-        setConversazioneAttiva(convList[0]);
+      } else if (convUniche.length > 0 && !conversazioneAttiva) {
+        setConversazioneAttiva(convUniche[0]);
       }
 
-      // Nickname controparti in background
+      // Recupera i nickname senza bloccare l'interfaccia
       const idsToFetch = new Set<string>();
-      convList.forEach((c) => {
+      convUniche.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
         if (c.venditore_id && c.venditore_id !== uid) idsToFetch.add(c.venditore_id);
       });
@@ -157,22 +150,18 @@ function ChatContent() {
               profData.forEach((p) => {
                 if (p.id && p.nickname) mappa[p.id] = p.nickname;
               });
-              setProfiliMap((prev) => {
-                const unione = { ...prev, ...mappa };
-                try {
-                  localStorage.setItem('zena_profili_cache', JSON.stringify(unione));
-                } catch {}
-                return unione;
-              });
+              setProfiliMap((prev) => ({ ...prev, ...mappa }));
             }
           });
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setCaricamento(false);
     }
   };
 
-  // Caricamento messaggi + Realtime
+  // Caricamento messaggi della chat attiva
   useEffect(() => {
     if (!conversazioneAttiva || !mioId) {
       setMessaggi([]);
@@ -180,16 +169,6 @@ function ChatContent() {
     }
 
     let isSubscribed = true;
-
-    // Cache messaggi per chat specifica (apertura istantanea)
-    try {
-      const cacheKey = `zena_msg_${conversazioneAttiva.id}`;
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        setMessaggi(JSON.parse(cached));
-        setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
-      }
-    } catch {}
 
     const caricaMessaggi = async () => {
       const { data } = await supabase
@@ -201,12 +180,9 @@ function ChatContent() {
       if (data && isSubscribed) {
         const msgs = data as Messaggio[];
         setMessaggi(msgs);
-        try {
-          localStorage.setItem(`zena_msg_${conversazioneAttiva.id}`, JSON.stringify(msgs));
-        } catch {}
         setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
 
-        // Segna come letti in background solo se necessario
+        // Segna come letti in background
         const daLeggere = msgs.some((m) => m.mittente_id !== mioId && !m.letto);
         if (daLeggere) {
           supabase
@@ -417,7 +393,7 @@ function ChatContent() {
           </div>
 
           <div className="flex-1 overflow-y-auto divide-y divide-sky-50">
-            {caricamento && conversazioni.length === 0 ? (
+            {caricamento ? (
               <div className="p-8 text-center text-xs text-slate-400 space-y-2">
                 <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                 <p>Caricamento messaggi...</p>
@@ -477,7 +453,7 @@ function ChatContent() {
           </div>
         </aside>
 
-        {/* Colonna Destra: Finestra Chat con Sfondo Azzurrino */}
+        {/* Colonna Destra: Finestra Chat */}
         <section
           className={`flex-1 bg-white rounded-2xl border border-sky-100 shadow-xs flex flex-col overflow-hidden relative ${
             vistaMobile === 'lista' ? 'hidden md:flex' : 'flex'
@@ -570,7 +546,7 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Area Messaggi con Sfondo Azzurrino Sfumato */}
+              {/* Area Messaggi con Sfondo Azzurrino */}
               <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-blue-50/30">
                 <div className="bg-white/80 backdrop-blur-xs border border-sky-100 rounded-xl p-2 text-[11px] text-sky-900 flex items-center justify-center gap-1.5 text-center shadow-2xs">
                   <span>🛡️</span>
