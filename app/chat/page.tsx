@@ -37,6 +37,12 @@ const RISPOSTE_RAPIDE = [
   'Perfetto, ci vediamo lì!',
 ];
 
+function formattaNomeUmano(nomeGrezzo?: string): string {
+  if (!nomeGrezzo || nomeGrezzo.trim() === '') return 'Utente';
+  const pulito = nomeGrezzo.trim();
+  return pulito.charAt(0).toUpperCase() + pulito.slice(1);
+}
+
 function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,6 +55,7 @@ function ChatContent() {
   const [nuovoTesto, setNuovoTesto] = useState('');
   const [caricamento, setCaricamento] = useState(true);
 
+  // Mappa id -> vero nickname scelto
   const [profiliMap, setProfiliMap] = useState<Record<string, string>>({});
   const [menuSicurezzaAperto, setMenuSicurezzaAperto] = useState(false);
   const [modalSegnalaAperto, setModalSegnalaAperto] = useState(false);
@@ -58,7 +65,6 @@ function ChatContent() {
   const [utentiBloccati, setUtentiBloccati] = useState<string[]>([]);
   const [vistaMobile, setVistaMobile] = useState<'lista' | 'chat'>('lista');
 
-  // Ref collegato ESCLUSIVAMENTE al box interno dei messaggi (la pagina resta ferma)
   const contenitoreMessaggiRef = useRef<HTMLDivElement>(null);
 
   const scorriInBasso = (smooth = true) => {
@@ -90,6 +96,12 @@ function ChatContent() {
         } catch {}
       }
 
+      // Pre-carica cache profili se presente
+      try {
+        const cachedProfili = localStorage.getItem('zena_profili_cache');
+        if (cachedProfili) setProfiliMap(JSON.parse(cachedProfili));
+      } catch {}
+
       await caricaConversazioni(uid);
       if (montato) setCaricamento(false);
     };
@@ -103,7 +115,6 @@ function ChatContent() {
 
   const caricaConversazioni = async (uid: string) => {
     try {
-      // Due query mirate in parallelo con indici dedicati (eliminano la lentezza del .or)
       const [resCompratore, resVenditore] = await Promise.all([
         supabase
           .from('conversazioni')
@@ -138,6 +149,7 @@ function ChatContent() {
         setConversazioneAttiva(convUniche[0]);
       }
 
+      // Recupera i veri nickname degli utenti
       const idsToFetch = new Set<string>();
       convUniche.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
@@ -145,19 +157,27 @@ function ChatContent() {
       });
 
       if (idsToFetch.size > 0) {
-        supabase
+        const { data: profData } = await supabase
           .from('profili')
           .select('id, nickname')
-          .in('id', Array.from(idsToFetch))
-          .then(({ data: profData }) => {
-            if (profData) {
-              const mappa: Record<string, string> = {};
-              profData.forEach((p) => {
-                if (p.id && p.nickname) mappa[p.id] = p.nickname;
-              });
-              setProfiliMap((prev) => ({ ...prev, ...mappa }));
+          .in('id', Array.from(idsToFetch));
+
+        if (profData) {
+          const mappa: Record<string, string> = {};
+          profData.forEach((p) => {
+            if (p.id && p.nickname) {
+              mappa[p.id] = formattaNomeUmano(p.nickname);
             }
           });
+
+          setProfiliMap((prev) => {
+            const aggiornata = { ...prev, ...mappa };
+            try {
+              localStorage.setItem('zena_profili_cache', JSON.stringify(aggiornata));
+            } catch {}
+            return aggiornata;
+          });
+        }
       }
     } catch (e) {
       console.error(e);
@@ -184,7 +204,6 @@ function ChatContent() {
       if (data && isSubscribed) {
         const msgs = data as Messaggio[];
         setMessaggi(msgs);
-        // Scorre solo il box interno senza toccare la finestra del browser
         setTimeout(() => scorriInBasso(false), 30);
 
         const daLeggere = msgs.some((m) => m.mittente_id !== mioId && !m.letto);
@@ -247,11 +266,12 @@ function ChatContent() {
       : conversazioneAttiva.compratore_id
     : '';
 
+  // Nickname pulito e umano
   const nicknameControparte = idControparte
-    ? profiliMap[idControparte] || `Genovese_${idControparte.slice(0, 4)}`
-    : 'Utente Zena & Go';
+    ? profiliMap[idControparte] || 'Utente'
+    : 'Utente';
 
-  const utenteAttualeBloccato = utentiBloccati.includes(idControparte);
+  const utenteAttualeBloccato = Boolean(idControparte && utentiBloccati.includes(idControparte));
 
   const inviaMessaggio = async (e?: React.FormEvent, testoParam?: string) => {
     if (e) e.preventDefault();
@@ -352,7 +372,7 @@ function ChatContent() {
 
   return (
     <div className="min-h-screen bg-sky-50/50 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
-      {/* Top Navbar fissa */}
+      {/* Top Navbar */}
       <header className="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <Link
@@ -413,7 +433,7 @@ function ChatContent() {
             ) : (
               conversazioni.map((c) => {
                 const partnerId = c.compratore_id === mioId ? c.venditore_id : c.compratore_id;
-                const partnerNick = profiliMap[partnerId] || `Genovese_${partnerId.slice(0, 4)}`;
+                const partnerNick = profiliMap[partnerId] || 'Utente';
                 const isSelected = conversazioneAttiva?.id === c.id;
 
                 return (
@@ -465,7 +485,7 @@ function ChatContent() {
         >
           {conversazioneAttiva ? (
             <>
-              {/* Header Chat */}
+              {/* Header Chat con Vero Nickname */}
               <div className="p-3 border-b border-sky-100 flex items-center justify-between bg-white z-10">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <button
@@ -525,7 +545,7 @@ function ChatContent() {
                         }}
                         className="w-full text-left px-3 py-2 text-slate-700 hover:bg-sky-50 flex items-center gap-2 cursor-pointer"
                       >
-                        <span>🚩</span> Segnala utente
+                        <span>🚩</span> Segnala {nicknameControparte}
                       </button>
 
                       {utenteAttualeBloccato ? (
@@ -534,7 +554,7 @@ function ChatContent() {
                           onClick={sbloccaUtente}
                           className="w-full text-left px-3 py-2 text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-semibold cursor-pointer"
                         >
-                          <span>🔓</span> Sblocca utente
+                          <span>🔓</span> Sblocca {nicknameControparte}
                         </button>
                       ) : (
                         <button
@@ -542,7 +562,7 @@ function ChatContent() {
                           onClick={bloccaUtente}
                           className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold cursor-pointer"
                         >
-                          <span>🚫</span> Blocca utente
+                          <span>🚫</span> Blocca {nicknameControparte}
                         </button>
                       )}
                     </div>
@@ -550,7 +570,7 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Area Messaggi: SCORRE SOLO QUESTO BOX, LA PAGINA ESTERNA NON SI MUOVE */}
+              {/* Area Messaggi con Sfondo Azzurrino */}
               <div
                 ref={contenitoreMessaggiRef}
                 className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-blue-50/30"
@@ -564,7 +584,7 @@ function ChatContent() {
 
                 {messaggi.length === 0 ? (
                   <div className="text-center py-12 text-slate-400 text-xs space-y-1">
-                    <p className="font-semibold text-slate-600">Nessun messaggio ancora.</p>
+                    <p className="font-semibold text-slate-600">Nessun messaggio ancora con {nicknameControparte}.</p>
                     <p>Invia un messaggio o usa le risposte rapide qui sotto!</p>
                   </div>
                 ) : (
@@ -576,7 +596,7 @@ function ChatContent() {
                         className={`flex flex-col ${isMio ? 'items-end' : 'items-start'}`}
                       >
                         {!isMio && (
-                          <span className="text-[10px] text-slate-400 mb-0.5 ml-2 font-medium">
+                          <span className="text-[10px] text-slate-500 mb-0.5 ml-2 font-semibold">
                             {nicknameControparte}
                           </span>
                         )}
