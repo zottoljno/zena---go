@@ -10,6 +10,7 @@ interface Annuncio {
   titolo: string;
   prezzo: number;
   quartiere: string;
+  categoria?: string;
   luogo_ritiro?: string;
   descrizione?: string;
   immagini?: string[];
@@ -18,9 +19,21 @@ interface Annuncio {
   user_id?: string;
 }
 
+const CATEGORIE = [
+  { id: 'Tutte', label: 'Tutte le categorie', icon: '✨' },
+  { id: 'Fumetti & Manga', label: 'Fumetti & Manga', icon: '📚' },
+  { id: 'Videogiochi & Console', label: 'Videogiochi & Console', icon: '🎮' },
+  { id: 'Cinema & DVD', label: 'Cinema & DVD', icon: '🎬' },
+  { id: 'Collezionismo & LEGO', label: 'Collezionismo & LEGO', icon: '🧱' },
+  { id: 'Informatica & Telefonia', label: 'Informatica & Telefonia', icon: '💻' },
+  { id: 'Abbigliamento', label: 'Abbigliamento', icon: '👕' },
+  { id: 'Casa & Arredamento', label: 'Casa & Arredo', icon: '🏠' },
+  { id: 'Sport & Bici', label: 'Sport & Bici', icon: '🚲' },
+  { id: 'Altro', label: 'Altro', icon: '📦' },
+];
+
 const QUARTIERI_GENOVA = [
   'Tutti i quartieri',
-  // Centro & Collina
   'Centro Storico / Caruggi',
   'Porto Antico / Molo',
   'San Vincenzo / Piazza De Ferrari',
@@ -29,8 +42,6 @@ const QUARTIERI_GENOVA = [
   'Manin / Circonvallazione a Monte',
   'Oregina / Lagaccio',
   'Principe / Dinegro',
-
-  // Levante & Mare
   'Foce',
   'Albaro',
   'San Giuliano / Corso Italia',
@@ -42,8 +53,6 @@ const QUARTIERI_GENOVA = [
   'Nervi / Sant\'Ilario',
   'Apparizione / Borgoratti',
   'Bavari / San Desiderio',
-
-  // Ponente
   'Sampierdarena',
   'San Teodoro',
   'Cornigliano',
@@ -55,16 +64,12 @@ const QUARTIERI_GENOVA = [
   'Pra\'',
   'Voltri',
   'Crevari',
-
-  // Val Bisagno
   'Marassi / Stadio',
   'San Fruttuoso',
   'Quezzi / Fereggiano',
   'Staglieno',
   'Molassana',
   'Struppa / Prato',
-
-  // Val Polcevera
   'Rivarolo / Certosa',
   'Fegino / Trasta',
   'Bolzaneto',
@@ -79,28 +84,28 @@ export default function Home() {
   const [sessioneUtente, setSessioneUtente] = useState<any>(null);
   const [nickname, setNickname] = useState('');
   const [filtroQuartiere, setFiltroQuartiere] = useState('Tutti i quartieri');
+  const [filtroCategoria, setFiltroCategoria] = useState('Tutte');
   const [ricerca, setRicerca] = useState('');
   const [nonLettiTotali, setNonLettiTotali] = useState(0);
 
   useEffect(() => {
     let montato = true;
 
-    // 1. CARICAMENTO ISTANTANEO DALLA CACHE LOCALE (0ms)
+    // Cache istantanea locale
     try {
       const cacheAnnunci = localStorage.getItem('zena_annunci_cache');
       if (cacheAnnunci) {
         const parsed = JSON.parse(cacheAnnunci);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setAnnunci(parsed);
-          setCaricamento(false); // Mostra subito le card, zero attese!
+          setCaricamento(false);
         }
       }
-
       const cachedNick = localStorage.getItem('zena_nickname');
       if (cachedNick) setNickname(cachedNick);
     } catch {}
 
-    // 2. Controllo Sessione e Notifiche in background
+    // Sessione e notifiche
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && montato) {
         setSessioneUtente(session.user);
@@ -123,12 +128,11 @@ export default function Home() {
       }
     });
 
-    // 3. Query snella su Supabase in background
-    const scaricaDatiFreschi = async () => {
+    const scaricaDati = async () => {
       try {
         const { data, error } = await supabase
           .from('annunci')
-          .select('id, titolo, prezzo, quartiere, immagini, venduto, created_at, user_id, descrizione')
+          .select('id, titolo, prezzo, quartiere, categoria, immagini, venduto, created_at, user_id, descrizione')
           .order('created_at', { ascending: false });
 
         if (!montato) return;
@@ -147,7 +151,7 @@ export default function Home() {
       }
     };
 
-    scaricaDatiFreschi();
+    scaricaDati();
 
     return () => {
       montato = false;
@@ -174,18 +178,20 @@ export default function Home() {
   const annunciFiltrati = annunci.filter((a) => {
     const matchQuartiere =
       filtroQuartiere === 'Tutti i quartieri' || a.quartiere === filtroQuartiere;
+    const matchCategoria =
+      filtroCategoria === 'Tutte' || a.categoria === filtroCategoria;
     const matchRicerca =
       !ricerca.trim() ||
       a.titolo.toLowerCase().includes(ricerca.toLowerCase()) ||
       (a.descrizione && a.descrizione.toLowerCase().includes(ricerca.toLowerCase()));
 
-    return matchQuartiere && matchRicerca;
+    return matchQuartiere && matchCategoria && matchRicerca;
   });
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       {/* Header Genova Blu & Ardesia */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-black text-slate-900 tracking-tight">
@@ -258,76 +264,127 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero: Zero Commissioni, Zero Spedizioni */}
-      <section className="bg-white border-b border-slate-200 py-6 sm:py-8 px-4 sm:px-6">
+      {/* Hero & Barra Ricerca */}
+      <section className="bg-white border-b border-slate-200 py-5 sm:py-7 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto space-y-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
               Zero commissioni. Zero spedizioni. Solo a Genova.
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 mt-1.5">
-              Il marketplace per comprare e vendere a mano nel tuo quartiere: accordati in <strong>chat</strong> e scambia di persona.
+            <p className="text-xs sm:text-sm text-slate-600 mt-1">
+              Compra, vendi e scambia a mano nel tuo quartiere in tutta sicurezza.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-1">
-            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
-              🤝 Scambio a mano
-            </span>
-            <span className="text-[11px] font-semibold bg-blue-50 text-blue-900 px-2.5 py-1 rounded-lg border border-blue-200">
-              ⚡ 0% commissioni
-            </span>
-            <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">
-              📍 Nei quartieri di Genova
-            </span>
+          {/* Input Cerca e Filtro Quartiere */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div className="relative sm:col-span-2">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+              <input
+                type="text"
+                placeholder="Cosa cerchi? (es. Batman, DVD, Nintendo, libri...)"
+                value={ricerca}
+                onChange={(e) => setRicerca(e.target.value)}
+                style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
+                className="w-full text-xs border border-slate-300 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-700 shadow-2xs"
+              />
+            </div>
+
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">📍</span>
+              <select
+                value={filtroQuartiere}
+                onChange={(e) => setFiltroQuartiere(e.target.value)}
+                style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
+                className="w-full text-xs border border-slate-300 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-700 shadow-2xs"
+              >
+                {QUARTIERI_GENOVA.map((q) => (
+                  <option key={q} value={q}>
+                    {q}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
-            <input
-              type="text"
-              placeholder="Cosa cerchi? (es. DVD, fumetti, libri, console...)"
-              value={ricerca}
-              onChange={(e) => setRicerca(e.target.value)}
-              style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-              className="sm:col-span-2 text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-700"
-            />
+      {/* Barra Categorie Orizzontale a Pillole */}
+      <section className="bg-white border-b border-slate-200/80 sticky top-[57px] z-20 backdrop-blur-md bg-white/95">
+        <div className="max-w-6xl mx-auto px-4 py-2.5">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+            {CATEGORIE.map((cat) => {
+              const attiva = filtroCategoria === cat.id;
+              const conteggio = cat.id === 'Tutte'
+                ? annunci.length
+                : annunci.filter((a) => a.categoria === cat.id).length;
 
-            <select
-              value={filtroQuartiere}
-              onChange={(e) => setFiltroQuartiere(e.target.value)}
-              style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-              className="text-xs border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-700"
-            >
-              {QUARTIERI_GENOVA.map((q) => (
-                <option key={q} value={q} style={{ color: '#0f172a', backgroundColor: '#ffffff' }}>
-                  {q}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="text-xs text-slate-400 pt-1">
-            {annunciFiltrati.length} {annunciFiltrati.length === 1 ? 'annuncio disponibile' : 'annunci disponibili'}
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setFiltroCategoria(cat.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                    attiva
+                      ? 'bg-blue-800 text-white shadow-xs scale-102 font-bold'
+                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/70 hover:border-slate-300'
+                  }`}
+                >
+                  <span className="text-sm">{cat.icon}</span>
+                  <span>{cat.label}</span>
+                  {conteggio > 0 && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        attiva ? 'bg-blue-900/60 text-blue-100' : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {conteggio}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* Bacheca Annunci */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            {filtroCategoria === 'Tutte' ? 'Tutti gli annunci' : filtroCategoria}
+            <span className="text-slate-400 font-normal lowercase ml-1">
+              ({annunciFiltrati.length} disponibili)
+            </span>
+          </div>
+
+          {(filtroCategoria !== 'Tutte' || filtroQuartiere !== 'Tutti i quartieri' || ricerca) && (
+            <button
+              onClick={() => {
+                setFiltroCategoria('Tutte');
+                setFiltroQuartiere('Tutti i quartieri');
+                setRicerca('');
+              }}
+              className="text-xs text-blue-800 hover:underline font-semibold"
+            >
+              Azzera filtri ✕
+            </button>
+          )}
+        </div>
+
         {caricamento && annunci.length === 0 ? (
           <div className="text-center py-16 text-slate-400 text-sm">Caricamento bacheca...</div>
         ) : annunciFiltrati.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8 shadow-xs">
-            <p className="text-3xl mb-2">📦</p>
-            <h3 className="font-bold text-slate-900 text-base mb-1">Nessun annuncio presente</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              La bacheca è attualmente vuota. Sii il primo a pubblicare un oggetto a Genova!
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8 shadow-xs space-y-3">
+            <p className="text-3xl">📦</p>
+            <h3 className="font-bold text-slate-900 text-base">Nessun oggetto trovato</h3>
+            <p className="text-xs text-slate-500">
+              Non ci sono annunci per questa categoria o quartiere. Prova ad azzerare i filtri o pubblica tu per primo!
             </p>
             <button
               onClick={() => handleAzioneProtetta('/pubblica')}
               className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition shadow-xs"
             >
-              + Pubblica il primo annuncio
+              + Pubblica un annuncio
             </button>
           </div>
         ) : (
@@ -357,6 +414,13 @@ export default function Home() {
                       </div>
                     )}
 
+                    {/* Badge Categoria sopra la foto */}
+                    {item.categoria && (
+                      <span className="absolute top-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-md">
+                        {item.categoria}
+                      </span>
+                    )}
+
                     {item.venduto ? (
                       <span className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center text-white font-black text-xs uppercase tracking-wider">
                         🤝 Scambiato
@@ -369,11 +433,9 @@ export default function Home() {
                   </div>
 
                   <div className="p-3.5">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-800 transition">
-                        {item.titolo}
-                      </h2>
-                    </div>
+                    <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-800 transition mb-1">
+                      {item.titolo}
+                    </h2>
                     <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
                       <span>📍</span>
                       <span className="truncate">{item.quartiere}</span>
