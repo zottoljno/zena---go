@@ -55,7 +55,6 @@ function ChatContent() {
   const [nuovoTesto, setNuovoTesto] = useState('');
   const [caricamento, setCaricamento] = useState(true);
 
-  // Mappa id -> vero nickname scelto
   const [profiliMap, setProfiliMap] = useState<Record<string, string>>({});
   const [menuSicurezzaAperto, setMenuSicurezzaAperto] = useState(false);
   const [modalSegnalaAperto, setModalSegnalaAperto] = useState(false);
@@ -96,7 +95,6 @@ function ChatContent() {
         } catch {}
       }
 
-      // Pre-carica cache profili se presente
       try {
         const cachedProfili = localStorage.getItem('zena_profili_cache');
         if (cachedProfili) setProfiliMap(JSON.parse(cachedProfili));
@@ -149,7 +147,6 @@ function ChatContent() {
         setConversazioneAttiva(convUniche[0]);
       }
 
-      // Recupera i veri nickname degli utenti
       const idsToFetch = new Set<string>();
       convUniche.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
@@ -266,7 +263,6 @@ function ChatContent() {
       : conversazioneAttiva.compratore_id
     : '';
 
-  // Nickname pulito e umano
   const nicknameControparte = idControparte
     ? profiliMap[idControparte] || 'Utente'
     : 'Utente';
@@ -371,28 +367,28 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen bg-sky-50/50 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
-      {/* Top Navbar */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans text-slate-900 antialiased selection:bg-slate-200">
+      {/* Top Navbar Minimale */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
           <Link
             href="/"
-            className="text-xs font-semibold text-slate-600 hover:text-blue-700 flex items-center gap-1.5 transition"
+            className="text-xs font-semibold text-slate-600 hover:text-slate-950 flex items-center gap-1.5 transition"
           >
             <span>←</span>
             <span>Bacheca</span>
           </Link>
 
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-bold text-slate-900 text-sm tracking-normal">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span className="font-bold text-slate-950 text-xs sm:text-sm tracking-tight">
               Trattative &amp; Scambi
             </span>
           </div>
 
           <Link
             href="/profilo"
-            className="text-xs font-medium text-slate-500 hover:text-blue-700 transition"
+            className="text-xs font-medium text-slate-600 hover:text-slate-950 transition"
           >
             Mio Profilo
           </Link>
@@ -401,33 +397,32 @@ function ChatContent() {
 
       {/* Main Container */}
       <main className="max-w-6xl w-full mx-auto p-2 sm:p-4 flex-1 flex flex-col md:flex-row gap-3 h-[calc(100vh-57px)]">
-        {/* Colonna Sinistra: Lista Chat */}
+        {/* Colonna Sinistra: Elenco Chat */}
         <aside
-          className={`w-full md:w-80 bg-white/95 rounded-2xl border border-sky-100 shadow-xs flex flex-col overflow-hidden shrink-0 transition-all ${
+          className={`w-full md:w-80 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-col overflow-hidden shrink-0 transition-all ${
             vistaMobile === 'chat' ? 'hidden md:flex' : 'flex'
           }`}
         >
-          <div className="p-3.5 border-b border-sky-100 bg-sky-50/40 flex items-center justify-between">
-            <h2 className="text-xs font-bold text-slate-700 tracking-wide uppercase">
+          <div className="p-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-xs font-bold text-slate-950 tracking-wider uppercase">
               Conversazioni ({conversazioni.length})
             </h2>
-            <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+            <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60">
               Genova
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-sky-50">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {caricamento ? (
               <div className="p-8 text-center text-xs text-slate-400 space-y-2">
-                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto"></div>
                 <p>Caricamento messaggi...</p>
               </div>
             ) : conversazioni.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400 space-y-2">
-                <span className="text-3xl block">💬</span>
-                <p className="font-semibold text-slate-600">Nessuna chat attiva</p>
-                <p className="text-[11px] text-slate-400">
-                  Scrivi a un annuncio per avviare uno scambio a mano nel quartiere!
+                <p className="font-semibold text-slate-800 text-sm">Nessuna chat attiva</p>
+                <p className="text-[11px] text-slate-500">
+                  Scrivi a un annuncio in bacheca per concordare uno scambio a mano.
                 </p>
               </div>
             ) : (
@@ -443,13 +438,13 @@ function ChatContent() {
                       setConversazioneAttiva(c);
                       setVistaMobile('chat');
                     }}
-                    className={`w-full text-left p-3.5 flex items-center gap-3 transition relative group cursor-pointer ${
+                    className={`w-full text-left p-3.5 flex items-center gap-3 transition cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-50/80 border-l-4 border-blue-600'
-                        : 'hover:bg-sky-50/50'
+                        ? 'bg-slate-100/90 border-l-4 border-slate-950'
+                        : 'hover:bg-slate-50'
                     }`}
                   >
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-sky-700 text-white overflow-hidden shrink-0 flex items-center justify-center font-bold text-sm shadow-xs relative">
+                    <div className="w-10 h-10 rounded-lg bg-slate-900 text-white overflow-hidden shrink-0 flex items-center justify-center font-bold text-xs">
                       {c.annunci?.immagini?.[0] ? (
                         <img src={c.annunci.immagini[0]} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -459,10 +454,10 @@ function ChatContent() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="font-semibold text-xs text-slate-900 truncate group-hover:text-blue-700 transition">
+                        <span className="font-semibold text-xs text-slate-950 truncate">
                           {partnerNick}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-slate-500 font-medium">
                           {c.annunci?.prezzo === 0 ? 'Gratis' : `${c.annunci?.prezzo} €`}
                         </span>
                       </div>
@@ -477,36 +472,36 @@ function ChatContent() {
           </div>
         </aside>
 
-        {/* Colonna Destra: Finestra Chat */}
+        {/* Colonna Destra: Finestra Chat Elegante in Toni Grigio/Nero */}
         <section
-          className={`flex-1 bg-white rounded-2xl border border-sky-100 shadow-xs flex flex-col overflow-hidden relative ${
+          className={`flex-1 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-col overflow-hidden relative ${
             vistaMobile === 'lista' ? 'hidden md:flex' : 'flex'
           }`}
         >
           {conversazioneAttiva ? (
             <>
-              {/* Header Chat con Vero Nickname */}
-              <div className="p-3 border-b border-sky-100 flex items-center justify-between bg-white z-10">
+              {/* Header Chat */}
+              <div className="p-3 sm:p-3.5 border-b border-slate-100 flex items-center justify-between bg-white z-10">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     type="button"
                     onClick={() => setVistaMobile('lista')}
-                    className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 rounded-lg cursor-pointer"
+                    className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-900 rounded-lg cursor-pointer"
                     title="Torna all'elenco"
                   >
                     ←
                   </button>
 
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-sky-700 text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-xs">
+                  <div className="w-9 h-9 rounded-lg bg-slate-950 text-white font-bold flex items-center justify-center text-xs shrink-0">
                     {nicknameControparte.charAt(0).toUpperCase()}
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                      <h3 className="font-bold text-xs sm:text-sm text-slate-950 truncate">
                         {nicknameControparte}
                       </h3>
-                      <span className="text-[9px] bg-sky-50 text-sky-700 border border-sky-200/60 px-1.5 py-0.2 rounded font-medium">
+                      <span className="text-[9px] bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.2 rounded font-medium">
                         {conversazioneAttiva.venditore_id === mioId ? 'Acquirente' : 'Venditore'}
                       </span>
                     </div>
@@ -514,9 +509,8 @@ function ChatContent() {
                     {conversazioneAttiva.annuncio_id && (
                       <Link
                         href={`/annuncio/${conversazioneAttiva.annuncio_id}`}
-                        className="text-[11px] text-blue-600 hover:text-blue-800 font-medium truncate block flex items-center gap-1"
+                        className="text-[11px] text-slate-600 hover:text-slate-950 font-medium truncate block flex items-center gap-1"
                       >
-                        <span>📦</span>
                         <span className="truncate">{conversazioneAttiva.annunci?.titolo || 'Vedi annuncio'}</span>
                         <span className="text-slate-400">({conversazioneAttiva.annunci?.quartiere})</span>
                       </Link>
@@ -524,37 +518,37 @@ function ChatContent() {
                   </div>
                 </div>
 
-                {/* Menu Sicurezza */}
+                {/* Opzioni Sicurezza */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setMenuSicurezzaAperto(!menuSicurezzaAperto)}
-                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-sky-50 rounded-xl transition font-bold text-sm cursor-pointer"
+                    className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition font-bold text-sm cursor-pointer"
                     title="Opzioni sicurezza"
                   >
                     ⋮
                   </button>
 
                   {menuSicurezzaAperto && (
-                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-sky-100 py-1.5 z-30 text-xs">
+                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 text-xs">
                       <button
                         type="button"
                         onClick={() => {
                           setMenuSicurezzaAperto(false);
                           setModalSegnalaAperto(true);
                         }}
-                        className="w-full text-left px-3 py-2 text-slate-700 hover:bg-sky-50 flex items-center gap-2 cursor-pointer"
+                        className="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                       >
-                        <span>🚩</span> Segnala {nicknameControparte}
+                        <span>🚩</span> Segnala utente
                       </button>
 
                       {utenteAttualeBloccato ? (
                         <button
                           type="button"
                           onClick={sbloccaUtente}
-                          className="w-full text-left px-3 py-2 text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-semibold cursor-pointer"
+                          className="w-full text-left px-3 py-2 text-slate-900 hover:bg-slate-50 flex items-center gap-2 font-semibold cursor-pointer"
                         >
-                          <span>🔓</span> Sblocca {nicknameControparte}
+                          <span>🔓</span> Sblocca utente
                         </button>
                       ) : (
                         <button
@@ -562,7 +556,7 @@ function ChatContent() {
                           onClick={bloccaUtente}
                           className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 font-semibold cursor-pointer"
                         >
-                          <span>🚫</span> Blocca {nicknameControparte}
+                          <span>🚫</span> Blocca utente
                         </button>
                       )}
                     </div>
@@ -570,22 +564,22 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Area Messaggi con Sfondo Azzurrino */}
+              {/* Area Messaggi in Toni Neutri Grigio/Nero */}
               <div
                 ref={contenitoreMessaggiRef}
-                className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-blue-50/30"
+                className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-[#f8fafc]"
               >
-                <div className="bg-white/80 backdrop-blur-xs border border-sky-100 rounded-xl p-2 text-[11px] text-sky-900 flex items-center justify-center gap-1.5 text-center shadow-2xs">
+                <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 text-[11px] text-slate-600 flex items-center justify-center gap-1.5 text-center shadow-2xs">
                   <span>🛡️</span>
                   <span>
-                    Accordo di scambio a Genova: accordatevi sempre in un luogo pubblico del quartiere.
+                    Accordo di persona a Genova: scegliete sempre un luogo pubblico e visibile nel quartiere.
                   </span>
                 </div>
 
                 {messaggi.length === 0 ? (
                   <div className="text-center py-12 text-slate-400 text-xs space-y-1">
-                    <p className="font-semibold text-slate-600">Nessun messaggio ancora con {nicknameControparte}.</p>
-                    <p>Invia un messaggio o usa le risposte rapide qui sotto!</p>
+                    <p className="font-semibold text-slate-700">Nessun messaggio ancora con {nicknameControparte}.</p>
+                    <p>Scrivi un messaggio o usa un promemoria rapido qui sotto.</p>
                   </div>
                 ) : (
                   messaggi.map((m) => {
@@ -596,21 +590,21 @@ function ChatContent() {
                         className={`flex flex-col ${isMio ? 'items-end' : 'items-start'}`}
                       >
                         {!isMio && (
-                          <span className="text-[10px] text-slate-500 mb-0.5 ml-2 font-semibold">
+                          <span className="text-[10px] text-slate-400 mb-0.5 ml-2 font-medium">
                             {nicknameControparte}
                           </span>
                         )}
                         <div
-                          className={`max-w-[82%] sm:max-w-[70%] px-4 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-xs ${
+                          className={`max-w-[82%] sm:max-w-[70%] px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-2xs ${
                             isMio
-                              ? 'bg-blue-600 text-white rounded-2xl rounded-br-xs shadow-blue-500/10'
-                              : 'bg-white text-slate-800 border border-sky-100/90 rounded-2xl rounded-bl-xs shadow-slate-200/40'
+                              ? 'bg-slate-950 text-white rounded-2xl rounded-br-xs'
+                              : 'bg-white text-slate-900 border border-slate-200/80 rounded-2xl rounded-bl-xs'
                           }`}
                         >
                           <p className="whitespace-pre-wrap font-normal">{m.testo}</p>
                           <div
                             className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
-                              isMio ? 'text-blue-100' : 'text-slate-400'
+                              isMio ? 'text-slate-400' : 'text-slate-400'
                             }`}
                           >
                             <span>
@@ -620,7 +614,7 @@ function ChatContent() {
                               })}
                             </span>
                             {isMio && (
-                              <span className="font-bold">{m.letto ? '✓✓' : '✓'}</span>
+                              <span className="font-semibold">{m.letto ? '✓✓' : '✓'}</span>
                             )}
                           </div>
                         </div>
@@ -630,15 +624,15 @@ function ChatContent() {
                 )}
               </div>
 
-              {/* Risposte Rapide */}
+              {/* Risposte Rapide Minimali */}
               {!utenteAttualeBloccato && (
-                <div className="px-3 pt-2 pb-1.5 bg-white border-t border-sky-100 flex gap-1.5 overflow-x-auto no-scrollbar">
+                <div className="px-3 pt-2 pb-1.5 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto no-scrollbar">
                   {RISPOSTE_RAPIDE.map((chip, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => inviaMessaggio(undefined, chip)}
-                      className="whitespace-nowrap text-[11px] font-medium bg-sky-50/80 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1 rounded-full border border-sky-100 transition shrink-0 cursor-pointer"
+                      className="whitespace-nowrap text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-full transition shrink-0 cursor-pointer"
                     >
                       {chip}
                     </button>
@@ -646,7 +640,7 @@ function ChatContent() {
                 </div>
               )}
 
-              {/* Input Invio Messaggio */}
+              {/* Barra Input Invio */}
               {utenteAttualeBloccato ? (
                 <div className="p-3 bg-red-50 border-t border-red-200 text-center text-xs text-red-700 flex items-center justify-center gap-2">
                   <span>🚫 Hai bloccato {nicknameControparte}.</span>
@@ -657,19 +651,19 @@ function ChatContent() {
               ) : (
                 <form
                   onSubmit={(e) => inviaMessaggio(e)}
-                  className="p-2.5 sm:p-3 border-t border-sky-100 bg-white flex items-center gap-2"
+                  className="p-2.5 sm:p-3 border-t border-slate-100 bg-white flex items-center gap-2"
                 >
                   <input
                     type="text"
                     value={nuovoTesto}
                     onChange={(e) => setNuovoTesto(e.target.value)}
                     placeholder={`Scrivi a ${nicknameControparte}...`}
-                    className="flex-1 text-xs sm:text-sm border border-sky-200/80 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 bg-sky-50/40 focus:bg-white transition"
+                    className="flex-1 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-slate-900 transition"
                   />
                   <button
                     type="submit"
                     disabled={!nuovoTesto.trim()}
-                    className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold flex items-center justify-center transition shadow-xs shrink-0 cursor-pointer"
+                    className="w-10 h-10 rounded-lg bg-slate-950 hover:bg-slate-800 disabled:opacity-30 text-white font-medium flex items-center justify-center transition shrink-0 cursor-pointer"
                     title="Invia"
                   >
                     ➤
@@ -678,9 +672,8 @@ function ChatContent() {
               )}
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400 text-xs space-y-2 bg-sky-50/30">
-              <span className="text-4xl">💬</span>
-              <p className="font-semibold text-slate-600">Nessuna conversazione selezionata</p>
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400 text-xs space-y-1 bg-[#f8fafc]">
+              <p className="font-semibold text-slate-700 text-sm">Nessuna conversazione selezionata</p>
               <p className="text-slate-400">Scegli una chat a sinistra per accordarti sullo scambio.</p>
             </div>
           )}
@@ -690,34 +683,34 @@ function ChatContent() {
       {/* Modal Segnalazione */}
       {modalSegnalaAperto && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-sky-100 space-y-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm text-slate-900">Segnala {nicknameControparte}</h3>
+              <h3 className="font-bold text-sm text-slate-950">Segnala {nicknameControparte}</h3>
               <button
                 type="button"
                 onClick={() => setModalSegnalaAperto(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 text-sm font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {segnalazioneInviata ? (
-              <div className="p-4 bg-blue-50 text-blue-900 text-xs rounded-xl font-medium text-center border border-blue-200">
+              <div className="p-4 bg-slate-100 text-slate-900 text-xs rounded-lg font-medium text-center border border-slate-200">
                 ✓ Segnalazione inviata ai moderatori di Zena &amp; Go.
               </div>
             ) : (
               <>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Aiutaci a mantenere la community genovese sicura e affidabile.
+                  Aiutaci a mantenere la community genovese affidabile e trasparente.
                 </p>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[11px] font-bold text-slate-700">Motivo</label>
                   <select
                     value={motivoSegnalazione}
                     onChange={(e) => setMotivoSegnalazione(e.target.value)}
-                    className="w-full text-xs border border-sky-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:border-slate-900"
                   >
                     <option value="Comportamento scorretto">Comportamento scorretto o offensivo</option>
                     <option value="Tentativo di truffa o pagamento sospetto">Tentativo di truffa o pagamento sospetto</option>
@@ -727,14 +720,14 @@ function ChatContent() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="block text-[11px] font-bold text-slate-700">Dettagli (facoltativo)</label>
                   <textarea
                     rows={3}
                     value={dettaglioSegnalazione}
                     onChange={(e) => setDettaglioSegnalazione(e.target.value)}
                     placeholder="Descrivi brevemente cosa è successo..."
-                    className="w-full text-xs border border-sky-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    className="w-full text-xs border border-slate-200 rounded-lg p-2.5 text-slate-900 bg-slate-50 focus:bg-white focus:outline-none focus:border-slate-900"
                   />
                 </div>
 
@@ -742,16 +735,16 @@ function ChatContent() {
                   <button
                     type="button"
                     onClick={() => setModalSegnalaAperto(false)}
-                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-xl cursor-pointer"
+                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-lg cursor-pointer"
                   >
                     Annulla
                   </button>
                   <button
                     type="button"
                     onClick={inviaSegnalazione}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 rounded-xl shadow-xs cursor-pointer"
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 rounded-lg transition cursor-pointer"
                   >
-                    Invia Segnalazione
+                    Invia
                   </button>
                 </div>
               </>
@@ -767,7 +760,7 @@ export default function ChatPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-sky-50/50 flex items-center justify-center text-xs text-slate-400">
+        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center text-xs text-slate-400">
           Caricamento chat...
         </div>
       }
