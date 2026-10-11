@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import Footer from "./Footer";
 
 export const metadata: Metadata = {
   title: "Zena & GO",
@@ -17,7 +16,6 @@ export const metadata: Metadata = {
   },
 };
 
-// BLOCCA IL PINCH-ZOOM INDIETRO E ANCORA LA PAGINA AL 100% DELLO SCHERMO
 export const viewport: Viewport = {
   themeColor: "#ffffff",
   width: "device-width",
@@ -39,7 +37,6 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col justify-between bg-white text-slate-900 antialiased overflow-x-hidden w-full max-w-full">
         <main className="flex-grow w-full max-w-full overflow-x-hidden">{children}</main>
-        <Footer />
       </body>
     </html>
   );
