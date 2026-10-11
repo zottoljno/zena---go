@@ -80,21 +80,46 @@ export default function Home() {
   const [nickname, setNickname] = useState('');
   const [filtroQuartiere, setFiltroQuartiere] = useState('Tutti i quartieri');
   const [ricerca, setRicerca] = useState('');
+  const [nonLettiTotali, setNonLettiTotali] = useState(0);
 
   useEffect(() => {
+    let montato = true;
+
     const controllaSessione = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+      if (session && montato) {
         setSessioneUtente(session.user);
-        const nick = session.user.user_metadata?.nickname || session.user.email?.split('@')[0] || 'Genovese';
+        const nick =
+          session.user.user_metadata?.nickname ||
+          session.user.email?.split('@')[0] ||
+          'Genovese';
         setNickname(nick);
         localStorage.setItem('zena_user_id', session.user.id);
         localStorage.setItem('zena_nickname', nick);
+
+        // Conta messaggi non letti destinati all'utente corrente
+        try {
+          const { count, error } = await supabase
+            .from('messaggi')
+            .select('id', { count: 'exact', head: true })
+            .neq('mittente_id', session.user.id)
+            .eq('letto', false);
+
+          if (!error && count && montato) {
+            setNonLettiTotali(count);
+          }
+        } catch (err) {
+          console.error('Errore conteggio messaggi non letti:', err);
+        }
       }
     };
 
     controllaSessione();
     caricaAnnunci();
+
+    return () => {
+      montato = false;
+    };
   }, []);
 
   const caricaAnnunci = async () => {
@@ -107,11 +132,13 @@ export default function Home() {
 
       if (error) {
         console.error('Errore nel recupero annunci:', error);
+        setAnnunci([]);
       } else if (data) {
         setAnnunci(data as Annuncio[]);
       }
     } catch (err) {
       console.error(err);
+      setAnnunci([]);
     } finally {
       setCaricamento(false);
     }
@@ -131,6 +158,7 @@ export default function Home() {
     localStorage.removeItem('zena_nickname');
     setSessioneUtente(null);
     setNickname('');
+    setNonLettiTotali(0);
   };
 
   const annunciFiltrati = annunci.filter((a) => {
@@ -171,10 +199,15 @@ export default function Home() {
 
                 <button
                   onClick={() => handleAzioneProtetta('/chat')}
-                  className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl transition border border-slate-200"
+                  className="relative flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl transition border border-slate-200"
                 >
                   <span>💬</span>
                   <span className="hidden sm:inline">Messaggi</span>
+                  {nonLettiTotali > 0 && (
+                    <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center leading-tight">
+                      {nonLettiTotali}
+                    </span>
+                  )}
                 </button>
 
                 <button
@@ -274,15 +307,17 @@ export default function Home() {
         {caricamento ? (
           <div className="text-center py-16 text-slate-400 text-sm">Caricamento bacheca...</div>
         ) : annunciFiltrati.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8">
-            <p className="text-3xl mb-2">🔍</p>
-            <h3 className="font-bold text-slate-900 text-base mb-1">Nessun annuncio trovato</h3>
-            <p className="text-xs text-slate-500 mb-4">Prova un altro quartiere o pubblica tu per primo!</p>
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8 shadow-xs">
+            <p className="text-3xl mb-2">📦</p>
+            <h3 className="font-bold text-slate-900 text-base mb-1">Nessun annuncio presente</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              La bacheca è attualmente vuota. Sii il primo a pubblicare un oggetto a Genova!
+            </p>
             <button
               onClick={() => handleAzioneProtetta('/pubblica')}
-              className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition"
+              className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition shadow-xs"
             >
-              Pubblica un annuncio
+              + Pubblica il primo annuncio
             </button>
           </div>
         ) : (
