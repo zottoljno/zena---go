@@ -10,6 +10,7 @@ interface Messaggio {
   conversazione_id: string;
   mittente_id: string;
   testo: string;
+  letto?: boolean;
   created_at: string;
 }
 
@@ -19,6 +20,7 @@ interface Conversazione {
   compratore_id: string;
   venditore_id: string;
   created_at: string;
+  non_letti?: number;
   annunci?: {
     titolo: string;
     prezzo: number;
@@ -40,7 +42,6 @@ function ChatContent() {
   const [caricamento, setCaricamento] = useState(true);
 
   const [profiliMap, setProfiliMap] = useState<Record<string, string>>({});
-
   const [menuSicurezzaAperto, setMenuSicurezzaAperto] = useState(false);
   const [modalSegnalaAperto, setModalSegnalaAperto] = useState(false);
   const [motivoSegnalazione, setMotivoSegnalazione] = useState('Comportamento scorretto');
@@ -54,7 +55,6 @@ function ChatContent() {
     let montato = true;
 
     const init = async () => {
-      // 1. Lettura immediata da cache per evitare attese
       const idLocale = typeof window !== 'undefined' ? localStorage.getItem('zena_user_id') : null;
       if (idLocale && montato) {
         setMioId(idLocale);
@@ -75,9 +75,7 @@ function ChatContent() {
       }
 
       const uid = session.user.id;
-      if (montato) {
-        setMioId(uid);
-      }
+      if (montato) setMioId(uid);
 
       await caricaConversazioni(uid);
       if (montato) setCaricamento(false);
@@ -104,9 +102,29 @@ function ChatContent() {
       }
 
       const convList = convData as unknown as Conversazione[];
-      setConversazioni(convList);
 
-      // Caricamento asincrono leggero dei nickname senza bloccare l'interfaccia
+      // Conta non letti per ogni conversazione
+      const { data: messaggiNonLetti } = await supabase
+        .from('messaggi')
+        .select('conversazione_id')
+        .neq('mittente_id', uid)
+        .eq('letto', false);
+
+      const conteggioMap: Record<string, number> = {};
+      if (messaggiNonLetti) {
+        messaggiNonLetti.forEach((m) => {
+          conteggioMap[m.conversazione_id] = (conteggioMap[m.conversazione_id] || 0) + 1;
+        });
+      }
+
+      const convConConteggi = convList.map((c) => ({
+        ...c,
+        non_letti: conteggioMap[c.id] || 0,
+      }));
+
+      setConversazioni(convConConteggi);
+
+      // Nicknames controparti
       const idsToFetch = new Set<string>();
       convList.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
@@ -130,28 +148,43 @@ function ChatContent() {
       }
 
       if (conversazioneIdParam) {
-        const trovata = convList.find((c) => String(c.id) === conversazioneIdParam);
+        const trovata = convConConteggi.find((c) => String(c.id) === conversazioneIdParam);
         if (trovata) {
           setConversazioneAttiva(trovata);
           return;
         }
       }
 
-      if (convList.length > 0 && !conversazioneAttiva) {
-        setConversazioneAttiva(convList[0]);
+      if (convConConteggi.length > 0 && !conversazioneAttiva) {
+        setConversazioneAttiva(convConConteggi[0]);
       }
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Segna come letti quando si apre la conversazione
   useEffect(() => {
-    if (!conversazioneAttiva) {
+    if (!conversazioneAttiva || !mioId) {
       setMessaggi([]);
       return;
     }
 
     let isSubscribed = true;
+
+    const segnaComeLetti = async () => {
+      await supabase
+        .from('messaggi')
+        .update({ letto: true })
+        .eq('conversazione_id', conversazioneAttiva.id)
+        .neq('mittente_id', mioId)
+        .eq('letto', false);
+
+      // Azzera contatore nella lista
+      setConversazioni((prev) =>
+        prev.map((c) => (c.id === conversazioneAttiva.id ? { ...c, non_letti: 0 } : c))
+      );
+    };
 
     const caricaMessaggi = async () => {
       const { data } = await supabase
@@ -164,6 +197,7 @@ function ChatContent() {
         setMessaggi(data as Messaggio[]);
         setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'auto' }), 10);
       }
+      segnaComeLetti();
     };
 
     caricaMessaggi();
@@ -181,7 +215,6 @@ function ChatContent() {
         (payload) => {
           const nuovoMsg = payload.new as Messaggio;
           setMessaggi((prev) => {
-            // Evita duplicati se già mostrato in modo ottimistico
             if (prev.some((m) => m.id === nuovoMsg.id || (m.mittente_id === nuovoMsg.mittente_id && m.testo === nuovoMsg.testo && m.id.startsWith('temp-')))) {
               return prev.map((m) =>
                 m.testo === nuovoMsg.testo && m.id.startsWith('temp-') ? nuovoMsg : m
@@ -189,6 +222,9 @@ function ChatContent() {
             }
             return [...prev, nuovoMsg];
           });
+          if (nuovoMsg.mittente_id !== mioId) {
+            segnaComeLetti();
+          }
           setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
         }
       )
@@ -198,7 +234,7 @@ function ChatContent() {
       isSubscribed = false;
       supabase.removeChannel(channel);
     };
-  }, [conversazioneAttiva]);
+  }, [conversazioneAttiva, mioId]);
 
   const idControparte = conversazioneAttiva
     ? conversazioneAttiva.compratore_id === mioId
@@ -212,7 +248,6 @@ function ChatContent() {
 
   const utenteAttualeBloccato = utentiBloccati.includes(idControparte);
 
-  // Invio istantaneo (Optimistic UI)
   const inviaMessaggio = async (e: React.FormEvent) => {
     e.preventDefault();
     const testo = nuovoTesto.trim();
@@ -224,21 +259,21 @@ function ChatContent() {
       conversazione_id: conversazioneAttiva.id,
       mittente_id: mioId,
       testo: testo,
+      letto: false,
       created_at: new Date().toISOString(),
     };
 
-    // 1. Appare istantaneamente a video
     setMessaggi((prev) => [...prev, messaggioProvvisorio]);
     setNuovoTesto('');
     setTimeout(() => fineMessaggiRef.current?.scrollIntoView({ behavior: 'smooth' }), 10);
 
-    // 2. Invio effettivo in background
     const { data, error } = await supabase
       .from('messaggi')
       .insert({
         conversazione_id: conversazioneAttiva.id,
         mittente_id: mioId,
         testo: testo,
+        letto: false,
       })
       .select()
       .single();
@@ -264,9 +299,8 @@ function ChatContent() {
         bloccato_id: idControparte,
       });
     } catch {
-      // Ignora se la tabella opzionale non esiste ancora
+      // Ignora se la tabella non esiste
     }
-
     setMenuSicurezzaAperto(false);
   };
 
@@ -288,9 +322,7 @@ function ChatContent() {
         motivo: motivoSegnalazione,
         dettagli: dettaglioSegnalazione,
       });
-    } catch {
-      // Ignora
-    }
+    } catch {}
 
     try {
       fetch('/api/segnala', {
@@ -303,9 +335,7 @@ function ChatContent() {
           conversazioneId: conversazioneAttiva.id,
         }),
       }).catch((err) => console.error('Errore Telegram:', err));
-    } catch {
-      // Ignora
-    }
+    } catch {}
 
     setSegnalazioneInviata(true);
     setTimeout(() => {
@@ -361,7 +391,7 @@ function ChatContent() {
                         : 'w-full text-left p-3.5 flex items-center gap-3 transition hover:bg-slate-50'
                     }
                   >
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-sm font-bold text-slate-600">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center text-sm font-bold text-slate-600 relative">
                       {c.annunci?.immagini?.[0] ? (
                         <img src={c.annunci.immagini[0]} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -369,11 +399,18 @@ function ChatContent() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <span className="font-bold text-xs text-slate-900 truncate">{partnerNick}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {c.annunci?.prezzo === 0 ? 'Gratis' : `${c.annunci?.prezzo} €`}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          {c.non_letti !== undefined && c.non_letti > 0 && (
+                            <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center">
+                              {c.non_letti}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {c.annunci?.prezzo === 0 ? 'Gratis' : `${c.annunci?.prezzo} €`}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate">{c.annunci?.titolo || 'Trattativa'}</p>
                     </div>
@@ -458,7 +495,7 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Banner Sicurezza Genova */}
+              {/* Banner Sicurezza */}
               <div className="bg-amber-50/80 border-b border-amber-200/80 px-3 py-1.5 text-[11px] text-amber-900 flex items-center justify-between">
                 <span>🛡️ <strong>Regola di Zena:</strong> incontro sempre di persona in un luogo pubblico del quartiere.</span>
               </div>
