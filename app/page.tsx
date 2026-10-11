@@ -94,7 +94,7 @@ export default function HomePage() {
   useEffect(() => {
     let montato = true;
 
-    // 1. Carica preferiti e cache locale (0ms)
+    // Cache e preferiti locali per rendering immediato a 0ms
     try {
       const prefSalvati = localStorage.getItem('zena_preferiti');
       if (prefSalvati) setPreferiti(JSON.parse(prefSalvati));
@@ -111,7 +111,7 @@ export default function HomePage() {
       if (cachedNick) setNickname(cachedNick);
     } catch {}
 
-    // 2. Controllo sessione in background
+    // Controllo sessione in background (non bloccante)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && montato) {
         setSessioneUtente(session.user);
@@ -134,7 +134,6 @@ export default function HomePage() {
       }
     });
 
-    // 3. Scarica annunci aggiornati da Supabase
     const scaricaDati = async () => {
       try {
         const { data, error } = await supabase
@@ -214,18 +213,18 @@ export default function HomePage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50/70 via-sky-50/30 to-blue-50/40 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
       {/* Banner Installa App PWA */}
       <InstallPrompt />
 
-      {/* Header Genova Blu & Ardesia */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+      {/* Header Genova Luminoso & Azzurrato */}
+      <header className="bg-white/90 backdrop-blur-md border-b border-sky-100/90 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-black text-slate-900 tracking-tight">
-              Zena <span className="text-blue-800">&amp;</span> Go
+              Zena <span className="text-blue-600">&amp;</span> Go
             </span>
-            <span className="hidden sm:inline-block text-[11px] bg-blue-50 text-blue-900 font-bold px-2 py-0.5 rounded-full border border-blue-200">
+            <span className="hidden sm:inline-block text-[11px] bg-sky-50 text-sky-800 font-bold px-2 py-0.5 rounded-full border border-sky-200/80">
               Genova
             </span>
           </div>
@@ -235,7 +234,7 @@ export default function HomePage() {
               <>
                 <Link
                   href="/profilo"
-                  className="text-xs font-semibold text-slate-700 hover:text-blue-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
+                  className="text-xs font-semibold text-slate-700 hover:text-blue-700 bg-sky-50/80 hover:bg-sky-100 border border-sky-200/80 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
                 >
                   <span>👤</span>
                   <span>{nickname}</span>
@@ -243,12 +242,12 @@ export default function HomePage() {
 
                 <button
                   onClick={() => handleAzioneProtetta('/chat')}
-                  className="relative flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl transition border border-slate-200 cursor-pointer"
+                  className="relative flex items-center gap-1.5 text-xs font-semibold bg-sky-50/80 hover:bg-sky-100 text-slate-800 px-3 py-1.5 rounded-xl transition border border-sky-200/80 cursor-pointer"
                 >
                   <span>💬</span>
                   <span className="hidden sm:inline">Messaggi</span>
                   {nonLettiTotali > 0 && (
-                    <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center leading-tight">
+                    <span className="bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center leading-tight">
                       {nonLettiTotali}
                     </span>
                   )}
@@ -256,7 +255,7 @@ export default function HomePage() {
 
                 <button
                   onClick={() => handleAzioneProtetta('/pubblica')}
-                  className="flex items-center gap-1 text-xs font-bold bg-blue-800 hover:bg-blue-900 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs cursor-pointer"
                 >
                   <span>+</span>
                   <span>Pubblica</span>
@@ -274,7 +273,7 @@ export default function HomePage() {
               <>
                 <button
                   onClick={() => handleAzioneProtetta('/pubblica')}
-                  className="flex items-center gap-1 text-xs font-bold bg-blue-800 hover:bg-blue-900 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs cursor-pointer"
                 >
                   <span>+</span>
                   <span>Pubblica</span>
@@ -292,12 +291,12 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero & Ricerca */}
-      <section className="bg-white border-b border-slate-200 py-5 sm:py-7 px-4 sm:px-6">
+      {/* Hero & Ricerca con Tocco Moderno */}
+      <section className="bg-white/80 backdrop-blur-xs border-b border-sky-100 py-6 sm:py-8 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto space-y-4">
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-              Zero commissioni. Zero spedizioni. Solo a Genova.
+              Zero commissioni. Zero spedizioni. <span className="text-blue-600">Solo a Genova.</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
               Compra, vendi e scambia a mano nel tuo quartiere in tutta sicurezza.
@@ -306,24 +305,24 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1">
             <div className="relative sm:col-span-6">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-400 text-xs">🔍</span>
               <input
                 type="text"
                 placeholder="Cosa cerchi? (es. Batman, DVD, Nintendo, libri...)"
                 value={ricerca}
                 onChange={(e) => setRicerca(e.target.value)}
                 style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-                className="w-full text-xs border border-slate-300 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-700 shadow-2xs"
+                className="w-full text-xs border border-sky-200/90 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
               />
             </div>
 
             <div className="relative sm:col-span-4">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">📍</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-400 text-xs">📍</span>
               <select
                 value={filtroQuartiere}
                 onChange={(e) => setFiltroQuartiere(e.target.value)}
                 style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-                className="w-full text-xs border border-slate-300 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-700 shadow-2xs"
+                className="w-full text-xs border border-sky-200/90 rounded-xl pl-9 pr-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
               >
                 {QUARTIERI_GENOVA.map((q) => (
                   <option key={q} value={q}>
@@ -338,8 +337,8 @@ export default function HomePage() {
               onClick={() => setSoloPreferiti(!soloPreferiti)}
               className={`sm:col-span-2 text-xs font-bold rounded-xl px-3 py-2.5 border transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer ${
                 soloPreferiti
-                  ? 'bg-red-50 text-red-600 border-red-300 shadow-xs'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+                  ? 'bg-rose-50 text-rose-600 border-rose-200 shadow-xs'
+                  : 'bg-white hover:bg-sky-50/70 text-slate-700 border-sky-200/90'
               }`}
             >
               <span>{soloPreferiti ? '❤️' : '🤍'}</span>
@@ -349,8 +348,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pillole Categorie */}
-      <section className="bg-white border-b border-slate-200/80 sticky top-[57px] z-20 backdrop-blur-md bg-white/95">
+      {/* Pillole Categorie Traslucide */}
+      <section className="sticky top-[57px] z-20 backdrop-blur-md bg-white/85 border-b border-sky-100">
         <div className="max-w-6xl mx-auto px-4 py-2.5">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
             {CATEGORIE.map((cat) => {
@@ -363,10 +362,10 @@ export default function HomePage() {
                 <button
                   key={cat.id}
                   onClick={() => setFiltroCategoria(cat.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                     attiva
-                      ? 'bg-blue-800 text-white shadow-xs scale-102 font-bold'
-                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/70 hover:border-slate-300'
+                      ? 'bg-blue-600 text-white shadow-xs font-bold scale-102'
+                      : 'bg-white/90 hover:bg-sky-50 text-slate-700 border border-sky-100 hover:border-sky-200'
                   }`}
                 >
                   <span className="text-sm">{cat.icon}</span>
@@ -374,7 +373,7 @@ export default function HomePage() {
                   {conteggio > 0 && (
                     <span
                       className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        attiva ? 'bg-blue-900/60 text-blue-100' : 'bg-slate-200 text-slate-600'
+                        attiva ? 'bg-blue-700 text-blue-100' : 'bg-sky-100/70 text-sky-800'
                       }`}
                     >
                       {conteggio}
@@ -387,7 +386,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Bacheca Annunci */}
+      {/* Bacheca Annunci su Sfondo Azzurrino */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
         <div className="flex items-center justify-between mb-4">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -409,7 +408,7 @@ export default function HomePage() {
                 setSoloPreferiti(false);
                 setRicerca('');
               }}
-              className="text-xs text-blue-800 hover:underline font-semibold cursor-pointer"
+              className="text-xs text-blue-600 hover:underline font-semibold cursor-pointer"
             >
               Azzera filtri ✕
             </button>
@@ -417,9 +416,12 @@ export default function HomePage() {
         </div>
 
         {caricamento && annunci.length === 0 ? (
-          <div className="text-center py-16 text-slate-400 text-sm">Caricamento bacheca...</div>
+          <div className="text-center py-16 text-slate-400 text-xs space-y-2">
+            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p>Caricamento bacheca...</p>
+          </div>
         ) : annunciFiltrati.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center max-w-md mx-auto my-8 shadow-xs space-y-3">
+          <div className="bg-white/95 rounded-2xl border border-sky-100 p-10 text-center max-w-md mx-auto my-8 shadow-xs space-y-3">
             <p className="text-3xl">{soloPreferiti ? '❤️' : '📦'}</p>
             <h3 className="font-bold text-slate-900 text-base">
               {soloPreferiti ? 'Nessun annuncio tra i preferiti' : 'Nessun oggetto trovato'}
@@ -432,14 +434,14 @@ export default function HomePage() {
             {soloPreferiti ? (
               <button
                 onClick={() => setSoloPreferiti(false)}
-                className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition shadow-xs cursor-pointer"
+                className="inline-block bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-xs cursor-pointer"
               >
                 Esplora tutta la bacheca
               </button>
             ) : (
               <button
                 onClick={() => handleAzioneProtetta('/pubblica')}
-                className="inline-block bg-blue-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-900 transition shadow-xs cursor-pointer"
+                className="inline-block bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-xs cursor-pointer"
               >
                 + Pubblica un annuncio
               </button>
@@ -453,12 +455,12 @@ export default function HomePage() {
               return (
                 <div
                   key={item.id}
-                  className={`bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition flex flex-col justify-between group ${
+                  className={`bg-white rounded-2xl border border-sky-100/90 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between group ${
                     item.venduto ? 'opacity-85' : ''
                   }`}
                 >
                   <Link href={`/annuncio/${item.id}`} className="block flex-1 relative">
-                    <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
+                    <div className="aspect-4/3 bg-sky-50/70 relative overflow-hidden">
                       {item.immagini && item.immagini.length > 0 ? (
                         <img
                           src={item.immagini[0]}
@@ -479,10 +481,10 @@ export default function HomePage() {
                       <button
                         type="button"
                         onClick={(e) => togglePreferito(e, item.id)}
-                        className={`absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-xs transition shadow-xs z-10 cursor-pointer ${
+                        className={`absolute top-2.5 left-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-xs transition shadow-xs z-10 cursor-pointer ${
                           isFav
-                            ? 'bg-red-500 text-white scale-110 shadow-red-500/20'
-                            : 'bg-slate-900/50 hover:bg-slate-900/80 text-white'
+                            ? 'bg-rose-500 text-white scale-110 shadow-rose-500/20'
+                            : 'bg-slate-900/40 hover:bg-slate-900/70 text-white'
                         }`}
                         title={isFav ? 'Rimuovi dai preferiti' : 'Salva tra i preferiti'}
                       >
@@ -494,14 +496,14 @@ export default function HomePage() {
                           🤝 Scambiato
                         </span>
                       ) : (
-                        <span className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
+                        <span className="absolute top-2.5 right-2.5 bg-slate-900/85 backdrop-blur-xs text-white font-black text-xs px-2.5 py-1 rounded-lg">
                           {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`}
                         </span>
                       )}
                     </div>
 
                     <div className="p-3.5">
-                      <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-800 transition mb-1">
+                      <h2 className="font-bold text-slate-900 text-sm line-clamp-1 group-hover:text-blue-600 transition mb-1">
                         {item.titolo}
                       </h2>
                       <p className="text-[11px] text-slate-500 flex items-center gap-1 mb-2">
@@ -528,7 +530,7 @@ export default function HomePage() {
                             `/chat?annuncioId=${item.id}&venditore=${item.user_id || 'venditore_default'}`
                           )
                         }
-                        className="w-full bg-slate-900 hover:bg-blue-800 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                        className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                       >
                         <span>💬</span>
                         <span>Scrivi in Chat</span>
