@@ -58,8 +58,7 @@ export default function ProfiloPage() {
 
   const toggleVenduto = async (id: number, statoAttuale?: boolean) => {
     const nuovoStato = !statoAttuale;
-    
-    // Aggiornamento immediato a video
+
     setMieiAnnunci((prev) =>
       prev.map((a) => (a.id === id ? { ...a, venduto: nuovoStato } : a))
     );
@@ -90,7 +89,10 @@ export default function ProfiloPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-4xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between">
-          <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-blue-900 flex items-center gap-1">
+          <Link
+            href="/"
+            className="text-xs font-semibold text-slate-600 hover:text-blue-900 flex items-center gap-1"
+          >
             ← Bacheca Zena &amp; Go
           </Link>
           <span className="font-extrabold text-slate-900 text-sm">Il tuo Profilo</span>
@@ -104,7 +106,6 @@ export default function ProfiloPage() {
       </header>
 
       <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 space-y-6">
-        {/* Scheda Utente */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-blue-800 text-white font-black text-lg flex items-center justify-center shadow-xs">
@@ -125,7 +126,6 @@ export default function ProfiloPage() {
           </Link>
         </div>
 
-        {/* Lista Miei Annunci */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -160,5 +160,61 @@ export default function ProfiloPage() {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-300 text-lg">📦</div>
                       )}
-                      {item.vendito && (
-                        <span className="absolute inset-0 bg-slate-900/60 text
+                      {item.venduto && (
+                        <span className="absolute inset-0 bg-slate-900/70 text-white text-[9px] font-black uppercase flex items-center justify-center text-center px-1">
+                          Scambiato
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/annuncio/${item.id}`}
+                          className="font-bold text-sm text-slate-900 hover:text-blue-800 truncate"
+                        >
+                          {item.titolo}
+                        </Link>
+                        {item.venduto && (
+                          <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-bold">
+                            Chiuso
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`} • {item.quartiere}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleVenduto(item.id, item.venduto)}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition ${
+                        item.venduto
+                          ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
+                          : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      {item.venduto ? '↩️ Rimetti disponibile' : '🤝 Segna come scambiato'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => eliminaAnnuncio(item.id)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition"
+                      title="Elimina definitivamente"
+                    >
+                      🗑️ Elimina
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
