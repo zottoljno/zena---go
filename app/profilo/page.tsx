@@ -20,6 +20,8 @@ export default function ProfiloPage() {
   const [utente, setUtente] = useState<any>(null);
   const [nickname, setNickname] = useState('');
   const [mieiAnnunci, setMieiAnnunci] = useState<Annuncio[]>([]);
+  const [annunciPreferiti, setAnnunciPreferiti] = useState<Annuncio[]>([]);
+  const [schedaAttiva, setSchedaAttiva] = useState<'miei' | 'preferiti'>('miei');
   const [caricamento, setCaricamento] = useState(true);
 
   useEffect(() => {
@@ -37,7 +39,11 @@ export default function ProfiloPage() {
         'Genovese';
       setNickname(nick);
 
-      await caricaMieiAnnunci(session.user.id);
+      await Promise.all([
+        caricaMieiAnnunci(session.user.id),
+        caricaPreferiti(),
+      ]);
+
       setCaricamento(false);
     };
 
@@ -45,14 +51,34 @@ export default function ProfiloPage() {
   }, [router]);
 
   const caricaMieiAnnunci = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('annunci')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
+    if (data) {
       setMieiAnnunci(data as Annuncio[]);
+    }
+  };
+
+  const caricaPreferiti = async () => {
+    try {
+      const salvati = localStorage.getItem('zena_preferiti');
+      if (!salvati) return;
+      const ids: number[] = JSON.parse(salvati);
+      if (!Array.isArray(ids) || ids.length === 0) return;
+
+      const { data } = await supabase
+        .from('annunci')
+        .select('*')
+        .in('id', ids);
+
+      if (data) {
+        setAnnunciPreferiti(data as Annuncio[]);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -74,8 +100,16 @@ export default function ProfiloPage() {
     if (!conferma) return;
 
     setMieiAnnunci((prev) => prev.filter((a) => a.id !== id));
-
     await supabase.from('annunci').delete().eq('id', id);
+  };
+
+  const rimuoviPreferito = (id: number) => {
+    const nuovaLista = annunciPreferiti.filter((a) => a.id !== id);
+    setAnnunciPreferiti(nuovaLista);
+    try {
+      const ids = nuovaLista.map((a) => a.id);
+      localStorage.setItem('zena_preferiti', JSON.stringify(ids));
+    } catch {}
   };
 
   const disconnetti = async () => {
@@ -106,6 +140,7 @@ export default function ProfiloPage() {
       </header>
 
       <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 space-y-6">
+        {/* Scheda Utente */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-blue-800 text-white font-black text-lg flex items-center justify-center shadow-xs">
@@ -126,29 +161,57 @@ export default function ProfiloPage() {
           </Link>
         </div>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              I tuoi annunci ({mieiAnnunci.length})
-            </h2>
-          </div>
+        {/* Tab di navigazione tra Miei Annunci e Preferiti */}
+        <div className="flex border-b border-slate-200 gap-4">
+          <button
+            type="button"
+            onClick={() => setSchedaAttiva('miei')}
+            className={`pb-3 text-xs font-bold transition border-b-2 -mb-px flex items-center gap-1.5 ${
+              schedaAttiva === 'miei'
+                ? 'border-blue-800 text-blue-800'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span>📦 I tuoi annunci</span>
+            <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.2 rounded-full">
+              {mieiAnnunci.length}
+            </span>
+          </button>
 
-          {caricamento ? (
-            <div className="text-center py-12 text-slate-400 text-xs">Caricamento tuoi annunci...</div>
-          ) : mieiAnnunci.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2">
-              <span className="text-3xl block">📦</span>
-              <p className="text-xs text-slate-500 font-medium">Non hai ancora pubblicato nessun oggetto.</p>
-              <Link
-                href="/pubblica"
-                className="inline-block text-xs font-bold text-blue-800 hover:underline pt-1"
-              >
-                Pubblica il tuo primo annuncio
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {mieiAnnunci.map((item) => (
+          <button
+            type="button"
+            onClick={() => setSchedaAttiva('preferiti')}
+            className={`pb-3 text-xs font-bold transition border-b-2 -mb-px flex items-center gap-1.5 ${
+              schedaAttiva === 'preferiti'
+                ? 'border-red-500 text-red-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span>❤️ Preferiti salvati</span>
+            <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.2 rounded-full">
+              {annunciPreferiti.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Contenuto Scheda Selezionata */}
+        {caricamento ? (
+          <div className="text-center py-12 text-slate-400 text-xs">Caricamento dati...</div>
+        ) : schedaAttiva === 'miei' ? (
+          <section className="space-y-3">
+            {mieiAnnunci.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2">
+                <span className="text-3xl block">📦</span>
+                <p className="text-xs text-slate-500 font-medium">Non hai ancora pubblicato nessun oggetto.</p>
+                <Link
+                  href="/pubblica"
+                  className="inline-block text-xs font-bold text-blue-800 hover:underline pt-1"
+                >
+                  Pubblica il tuo primo annuncio
+                </Link>
+              </div>
+            ) : (
+              mieiAnnunci.map((item) => (
                 <div
                   key={item.id}
                   className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -210,10 +273,77 @@ export default function ProfiloPage() {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              ))
+            )}
+          </section>
+        ) : (
+          <section className="space-y-3">
+            {annunciPreferiti.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2">
+                <span className="text-3xl block">❤️</span>
+                <p className="text-xs text-slate-500 font-medium">Non hai ancora nessun annuncio salvato tra i preferiti.</p>
+                <Link
+                  href="/"
+                  className="inline-block text-xs font-bold text-blue-800 hover:underline pt-1"
+                >
+                  Sfoglia la bacheca e aggiungi annunci con il cuoricino
+                </Link>
+              </div>
+            ) : (
+              annunciPreferiti.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0 relative">
+                      {item.immagini && item.immagini.length > 0 ? (
+                        <img src={item.immagini[0]} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300 text-lg">📦</div>
+                      )}
+                      {item.venduto && (
+                        <span className="absolute inset-0 bg-slate-900/70 text-white text-[9px] font-black uppercase flex items-center justify-center text-center px-1">
+                          Scambiato
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <Link
+                        href={`/annuncio/${item.id}`}
+                        className="font-bold text-sm text-slate-900 hover:text-blue-800 truncate block"
+                      >
+                        {item.titolo}
+                      </Link>
+                      <p className="text-xs text-slate-500">
+                        {item.prezzo === 0 ? 'Gratis' : `${item.prezzo} €`} • {item.quartiere}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <Link
+                      href={`/annuncio/${item.id}`}
+                      className="text-xs font-bold bg-blue-800 hover:bg-blue-900 text-white px-3.5 py-1.5 rounded-xl transition shadow-xs"
+                    >
+                      Vedi annuncio
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => rimuoviPreferito(item.id)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 border border-slate-200 transition"
+                      title="Rimuovi dai preferiti"
+                    >
+                      ✕ Rimuovi
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </section>
+        )}
       </main>
     </div>
   );
