@@ -56,8 +56,6 @@ function ChatContent() {
   const [dettaglioSegnalazione, setDettaglioSegnalazione] = useState('');
   const [segnalazioneInviata, setSegnalazioneInviata] = useState(false);
   const [utentiBloccati, setUtentiBloccati] = useState<string[]>([]);
-
-  // Per mobile: visualizzare la lista o la conversazione attiva
   const [vistaMobile, setVistaMobile] = useState<'lista' | 'chat'>('lista');
 
   const fineMessaggiRef = useRef<HTMLDivElement>(null);
@@ -114,7 +112,6 @@ function ChatContent() {
 
       const convList = convData as unknown as Conversazione[];
 
-      // Conteggio messaggi non letti per ciascuna chat
       const { data: messaggiNonLetti } = await supabase
         .from('messaggi')
         .select('conversazione_id')
@@ -135,7 +132,6 @@ function ChatContent() {
 
       setConversazioni(convConConteggi);
 
-      // Recupera i nickname degli altri utenti
       const idsToFetch = new Set<string>();
       convList.forEach((c) => {
         if (c.compratore_id && c.compratore_id !== uid) idsToFetch.add(c.compratore_id);
@@ -175,7 +171,6 @@ function ChatContent() {
     }
   };
 
-  // Caricamento messaggi + Realtime
   useEffect(() => {
     if (!conversazioneAttiva || !mioId) {
       setMessaggi([]);
@@ -365,13 +360,13 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800">
-      {/* Top Navbar compatta */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+    <div className="min-h-screen bg-sky-50/50 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
+      {/* Top Navbar */}
+      <header className="bg-white/90 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <Link
             href="/"
-            className="text-xs font-bold text-slate-700 hover:text-blue-900 flex items-center gap-1.5 transition"
+            className="text-xs font-semibold text-slate-600 hover:text-blue-700 flex items-center gap-1.5 transition"
           >
             <span>←</span>
             <span>Bacheca</span>
@@ -379,48 +374,50 @@ function ChatContent() {
 
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-black text-slate-900 text-sm tracking-tight">
-              Chat &amp; Scambi
+            <span className="font-bold text-slate-900 text-sm tracking-normal">
+              Trattative &amp; Scambi
             </span>
           </div>
 
           <Link
             href="/profilo"
-            className="text-xs font-medium text-slate-500 hover:text-slate-800 transition"
+            className="text-xs font-medium text-slate-500 hover:text-blue-700 transition"
           >
             Mio Profilo
           </Link>
         </div>
       </header>
 
-      {/* Main Container a 2 colonne */}
+      {/* Main Container */}
       <main className="max-w-6xl w-full mx-auto p-2 sm:p-4 flex-1 flex flex-col md:flex-row gap-3 h-[calc(100vh-57px)]">
         
         {/* Colonna Sinistra: Lista Chat */}
         <aside
-          className={`w-full md:w-80 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden shrink-0 transition-all ${
+          className={`w-full md:w-80 bg-white/95 rounded-2xl border border-sky-100 shadow-xs flex flex-col overflow-hidden shrink-0 transition-all ${
             vistaMobile === 'chat' ? 'hidden md:flex' : 'flex'
           }`}
         >
-          <div className="p-3.5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-            <h2 className="text-xs font-black text-slate-800 tracking-wide uppercase">
-              I tuoi contatti ({conversazioni.length})
+          <div className="p-3.5 border-b border-sky-100 bg-sky-50/40 flex items-center justify-between">
+            <h2 className="text-xs font-bold text-slate-700 tracking-wide uppercase">
+              Conversazioni ({conversazioni.length})
             </h2>
-            <span className="text-[10px] text-slate-400 font-semibold">Genova</span>
+            <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+              Genova
+            </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+          <div className="flex-1 overflow-y-auto divide-y divide-sky-50">
             {caricamento ? (
               <div className="p-8 text-center text-xs text-slate-400 space-y-2">
-                <div className="w-6 h-6 border-2 border-blue-800 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <p>Caricamento chat...</p>
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p>Caricamento messaggi...</p>
               </div>
             ) : conversazioni.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400 space-y-2">
                 <span className="text-3xl block">💬</span>
-                <p className="font-semibold text-slate-600">Nessuna conversazione ancora</p>
+                <p className="font-semibold text-slate-600">Nessuna chat attiva</p>
                 <p className="text-[11px] text-slate-400">
-                  Scrivi a un annuncio in bacheca per iniziare uno scambio a mano!
+                  Scrivi a un annuncio per avviare uno scambio a mano nel quartiere!
                 </p>
               </div>
             ) : (
@@ -438,11 +435,11 @@ function ChatContent() {
                     }}
                     className={`w-full text-left p-3.5 flex items-center gap-3 transition relative group ${
                       isSelected
-                        ? 'bg-blue-50/90 border-l-4 border-blue-800'
-                        : 'hover:bg-slate-50'
+                        ? 'bg-blue-50/80 border-l-4 border-blue-600'
+                        : 'hover:bg-sky-50/50'
                     }`}
                   >
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-800 to-slate-900 text-white overflow-hidden shrink-0 flex items-center justify-center font-black text-sm shadow-xs relative">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-sky-700 text-white overflow-hidden shrink-0 flex items-center justify-center font-bold text-sm shadow-xs relative">
                       {c.annunci?.immagini?.[0] ? (
                         <img src={c.annunci.immagini[0]} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -452,20 +449,20 @@ function ChatContent() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <span className="font-bold text-xs text-slate-900 truncate group-hover:text-blue-900 transition">
+                        <span className="font-semibold text-xs text-slate-900 truncate group-hover:text-blue-700 transition">
                           {partnerNick}
                         </span>
                         {c.non_letti !== undefined && c.non_letti > 0 ? (
-                          <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full min-w-4 text-center">
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-4 text-center">
                             {c.non_letti}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-400 font-semibold">
+                          <span className="text-[10px] text-slate-400 font-medium">
                             {c.annunci?.prezzo === 0 ? 'Gratis' : `${c.annunci?.prezzo} €`}
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-500 truncate font-medium">
+                      <p className="text-[11px] text-slate-500 truncate font-normal">
                         {c.annunci?.titolo || 'Trattativa in corso'}
                       </p>
                     </div>
@@ -476,18 +473,17 @@ function ChatContent() {
           </div>
         </aside>
 
-        {/* Colonna Destra: Chat attiva */}
+        {/* Colonna Destra: Finestra Chat con Sfondo Azzurrino */}
         <section
-          className={`flex-1 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden relative ${
+          className={`flex-1 bg-white rounded-2xl border border-sky-100 shadow-xs flex flex-col overflow-hidden relative ${
             vistaMobile === 'lista' ? 'hidden md:flex' : 'flex'
           }`}
         >
           {conversazioneAttiva ? (
             <>
-              {/* Header Conversazione Attiva */}
-              <div className="p-3 border-b border-slate-200 flex items-center justify-between bg-white z-10 shadow-2xs">
+              {/* Header Chat */}
+              <div className="p-3 border-b border-sky-100 flex items-center justify-between bg-white z-10">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  {/* Tasto indietro visibile su mobile */}
                   <button
                     type="button"
                     onClick={() => setVistaMobile('lista')}
@@ -497,24 +493,24 @@ function ChatContent() {
                     ←
                   </button>
 
-                  <div className="w-10 h-10 rounded-xl bg-blue-800 text-white font-black flex items-center justify-center text-sm shrink-0 shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-sky-700 text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-xs">
                     {nicknameControparte.charAt(0).toUpperCase()}
                   </div>
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                      <h3 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
                         {nicknameControparte}
                       </h3>
-                      <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                        {conversazioneAttiva.venditore_id === mioId ? 'Compratore' : 'Venditore'}
+                      <span className="text-[9px] bg-sky-50 text-sky-700 border border-sky-200/60 px-1.5 py-0.2 rounded font-medium">
+                        {conversazioneAttiva.venditore_id === mioId ? 'Acquirente' : 'Venditore'}
                       </span>
                     </div>
 
                     {conversazioneAttiva.annuncio_id && (
                       <Link
                         href={`/annuncio/${conversazioneAttiva.annuncio_id}`}
-                        className="text-[11px] text-blue-800 hover:text-blue-900 font-semibold truncate block flex items-center gap-1"
+                        className="text-[11px] text-blue-600 hover:text-blue-800 font-medium truncate block flex items-center gap-1"
                       >
                         <span>📦</span>
                         <span className="truncate">{conversazioneAttiva.annunci?.titolo || 'Vedi annuncio'}</span>
@@ -524,26 +520,26 @@ function ChatContent() {
                   </div>
                 </div>
 
-                {/* Menu Opzioni & Sicurezza */}
+                {/* Menu Sicurezza */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setMenuSicurezzaAperto(!menuSicurezzaAperto)}
-                    className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition font-black text-sm"
+                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-sky-50 rounded-xl transition font-bold text-sm"
                     title="Opzioni sicurezza"
                   >
                     ⋮
                   </button>
 
                   {menuSicurezzaAperto && (
-                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs">
+                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-sky-100 py-1.5 z-30 text-xs">
                       <button
                         type="button"
                         onClick={() => {
                           setMenuSicurezzaAperto(false);
                           setModalSegnalaAperto(true);
                         }}
-                        className="w-full text-left px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-slate-700 hover:bg-sky-50 flex items-center gap-2"
                       >
                         <span>🚩</span> Segnala utente
                       </button>
@@ -552,7 +548,7 @@ function ChatContent() {
                         <button
                           type="button"
                           onClick={sbloccaUtente}
-                          className="w-full text-left px-3 py-2 text-blue-700 hover:bg-blue-50 flex items-center gap-2 font-semibold"
+                          className="w-full text-left px-3 py-2 text-blue-600 hover:bg-blue-50 flex items-center gap-2 font-semibold"
                         >
                           <span>🔓</span> Sblocca utente
                         </button>
@@ -570,20 +566,20 @@ function ChatContent() {
                 </div>
               </div>
 
-              {/* Area Messaggi */}
-              <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-2.5 bg-slate-50/70">
-                {/* Banner Scambio Sicuro compatto */}
-                <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-2 text-[11px] text-amber-900 flex items-center justify-center gap-1.5 text-center shadow-2xs">
+              {/* Area Messaggi: SFONDO AZZURRINO SFUMATO */}
+              <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-3 bg-gradient-to-b from-sky-50/70 via-sky-50/40 to-blue-50/30">
+                {/* Banner Scambio Sicuro */}
+                <div className="bg-white/80 backdrop-blur-xs border border-sky-100 rounded-xl p-2 text-[11px] text-sky-900 flex items-center justify-center gap-1.5 text-center shadow-2xs">
                   <span>🛡️</span>
                   <span>
-                    Accordo di scambio a Genova: incontratevi di persona in un luogo pubblico.
+                    Accordo di scambio a Genova: accordatevi sempre in un luogo pubblico del quartiere.
                   </span>
                 </div>
 
                 {messaggi.length === 0 ? (
                   <div className="text-center py-12 text-slate-400 text-xs space-y-1">
                     <p className="font-semibold text-slate-600">Nessun messaggio ancora.</p>
-                    <p>Invia un messaggio o tocca una delle risposte rapide qui sotto!</p>
+                    <p>Invia un messaggio o usa le risposte rapide qui sotto!</p>
                   </div>
                 ) : (
                   messaggi.map((m) => {
@@ -594,21 +590,21 @@ function ChatContent() {
                         className={`flex flex-col ${isMio ? 'items-end' : 'items-start'}`}
                       >
                         {!isMio && (
-                          <span className="text-[10px] text-slate-400 mb-0.5 ml-2 font-semibold">
+                          <span className="text-[10px] text-slate-400 mb-0.5 ml-2 font-medium">
                             {nicknameControparte}
                           </span>
                         )}
                         <div
-                          className={`max-w-[82%] sm:max-w-[70%] px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed shadow-2xs ${
+                          className={`max-w-[82%] sm:max-w-[70%] px-4 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-xs ${
                             isMio
-                              ? 'bg-gradient-to-br from-blue-800 to-blue-900 text-white rounded-2xl rounded-br-xs'
-                              : 'bg-white text-slate-800 border border-slate-200 rounded-2xl rounded-bl-xs'
+                              ? 'bg-blue-600 text-white rounded-2xl rounded-br-xs shadow-blue-500/10'
+                              : 'bg-white text-slate-800 border border-sky-100/90 rounded-2xl rounded-bl-xs shadow-slate-200/40'
                           }`}
                         >
-                          <p className="whitespace-pre-wrap">{m.testo}</p>
+                          <p className="whitespace-pre-wrap font-normal">{m.testo}</p>
                           <div
                             className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
-                              isMio ? 'text-blue-200' : 'text-slate-400'
+                              isMio ? 'text-blue-100' : 'text-slate-400'
                             }`}
                           >
                             <span>
@@ -618,7 +614,7 @@ function ChatContent() {
                               })}
                             </span>
                             {isMio && (
-                              <span>{m.letto ? '✓✓' : '✓'}</span>
+                              <span className="font-bold">{m.letto ? '✓✓' : '✓'}</span>
                             )}
                           </div>
                         </div>
@@ -629,15 +625,15 @@ function ChatContent() {
                 <div ref={fineMessaggiRef} />
               </div>
 
-              {/* Risposte Rapide per Scambio a Genova */}
+              {/* Risposte Rapide */}
               {!utenteAttualeBloccato && (
-                <div className="px-3 pt-2 pb-1 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto no-scrollbar">
+                <div className="px-3 pt-2 pb-1.5 bg-white border-t border-sky-100 flex gap-1.5 overflow-x-auto no-scrollbar">
                   {RISPOSTE_RAPIDE.map((chip, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => inviaMessaggio(undefined, chip)}
-                      className="whitespace-nowrap text-[11px] font-medium bg-slate-100 hover:bg-blue-50 hover:text-blue-900 text-slate-700 px-3 py-1 rounded-full border border-slate-200 transition shrink-0"
+                      className="whitespace-nowrap text-[11px] font-medium bg-sky-50/80 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-3 py-1 rounded-full border border-sky-100 transition shrink-0"
                     >
                       {chip}
                     </button>
@@ -656,19 +652,19 @@ function ChatContent() {
               ) : (
                 <form
                   onSubmit={(e) => inviaMessaggio(e)}
-                  className="p-2.5 sm:p-3 border-t border-slate-200 bg-white flex items-center gap-2"
+                  className="p-2.5 sm:p-3 border-t border-sky-100 bg-white flex items-center gap-2"
                 >
                   <input
                     type="text"
                     value={nuovoTesto}
                     onChange={(e) => setNuovoTesto(e.target.value)}
                     placeholder={`Scrivi a ${nicknameControparte}...`}
-                    className="flex-1 text-xs sm:text-sm border border-slate-300 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-800 text-slate-900 bg-slate-50 focus:bg-white transition"
+                    className="flex-1 text-xs sm:text-sm border border-sky-200/80 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 text-slate-900 bg-sky-50/40 focus:bg-white transition"
                   />
                   <button
                     type="submit"
                     disabled={!nuovoTesto.trim()}
-                    className="w-10 h-10 rounded-full bg-blue-800 hover:bg-blue-900 disabled:opacity-40 text-white font-bold flex items-center justify-center transition shadow-xs shrink-0"
+                    className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold flex items-center justify-center transition shadow-xs shrink-0 cursor-pointer"
                     title="Invia"
                   >
                     ➤
@@ -677,7 +673,7 @@ function ChatContent() {
               )}
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400 text-xs space-y-2">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400 text-xs space-y-2 bg-sky-50/30">
               <span className="text-4xl">💬</span>
               <p className="font-semibold text-slate-600">Nessuna conversazione selezionata</p>
               <p className="text-slate-400">Scegli una chat a sinistra per accordarti sullo scambio.</p>
@@ -689,9 +685,9 @@ function ChatContent() {
       {/* Modal Segnalazione */}
       {modalSegnalaAperto && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-sky-100 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-sm text-slate-900">Segnala {nicknameControparte}</h3>
+              <h3 className="font-bold text-sm text-slate-900">Segnala {nicknameControparte}</h3>
               <button
                 type="button"
                 onClick={() => setModalSegnalaAperto(false)}
@@ -716,7 +712,7 @@ function ChatContent() {
                   <select
                     value={motivoSegnalazione}
                     onChange={(e) => setMotivoSegnalazione(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-800"
+                    className="w-full text-xs border border-sky-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
                   >
                     <option value="Comportamento scorretto">Comportamento scorretto o offensivo</option>
                     <option value="Tentativo di truffa o pagamento sospetto">Tentativo di truffa o pagamento sospetto</option>
@@ -733,7 +729,7 @@ function ChatContent() {
                     value={dettaglioSegnalazione}
                     onChange={(e) => setDettaglioSegnalazione(e.target.value)}
                     placeholder="Descrivi brevemente cosa è successo..."
-                    className="w-full text-xs border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-800"
+                    className="w-full text-xs border border-sky-200 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
                   />
                 </div>
 
@@ -766,7 +762,7 @@ export default function ChatPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center text-xs text-slate-400">
+        <div className="min-h-screen bg-sky-50/50 flex items-center justify-center text-xs text-slate-400">
           Caricamento chat...
         </div>
       }
