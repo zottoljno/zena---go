@@ -211,36 +211,36 @@ export default function HomePage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans text-slate-900 antialiased">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans text-slate-900 antialiased w-full max-w-full overflow-x-hidden">
       <InstallPrompt />
 
-      {/* Header Minimale */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-xl font-black tracking-tight text-slate-950 flex items-center gap-1.5">
+      {/* Header Minimale & Mobile Safe */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 w-full max-w-full">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link href="/" className="text-lg sm:text-xl font-black tracking-tight text-slate-950 flex items-center gap-1">
               <span>Zena</span>
               <span className="text-slate-400 font-light">&amp;</span>
               <span>Go</span>
             </Link>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 border border-slate-200 px-2 py-0.5 rounded-full">
+            <span className="hidden xs:inline-block text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-slate-400 border border-slate-200 px-1.5 py-0.5 rounded-full">
               Genova
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {sessioneUtente ? (
               <>
                 <Link
                   href="/profilo"
-                  className="text-xs font-medium text-slate-700 hover:text-slate-950 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
+                  className="text-xs font-medium text-slate-700 hover:text-slate-950 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100 transition truncate max-w-[90px] sm:max-w-none"
                 >
                   {nickname}
                 </Link>
 
                 <button
                   onClick={() => handleAzioneProtetta('/chat')}
-                  className="relative text-xs font-medium text-slate-700 hover:text-slate-950 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer flex items-center gap-1"
+                  className="relative text-xs font-medium text-slate-700 hover:text-slate-950 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer flex items-center gap-1"
                 >
                   <span>Messaggi</span>
                   {nonLettiTotali > 0 && (
@@ -252,14 +252,15 @@ export default function HomePage() {
 
                 <button
                   onClick={() => handleAzioneProtetta('/pubblica')}
-                  className="bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-xs cursor-pointer ml-1"
+                  className="bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold px-2.5 sm:px-4 py-2 rounded-lg transition shadow-xs cursor-pointer ml-1"
                 >
-                  + Vendi o Regala
+                  <span className="sm:hidden">+</span>
+                  <span className="hidden sm:inline">+ Vendi o Regala</span>
                 </button>
 
                 <button
                   onClick={disconnetti}
-                  className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 transition cursor-pointer"
+                  className="text-xs text-slate-400 hover:text-slate-600 px-1.5 py-1 transition cursor-pointer"
                   title="Esci"
                 >
                   Esci
@@ -269,16 +270,16 @@ export default function HomePage() {
               <>
                 <Link
                   href="/login"
-                  className="text-xs font-medium text-slate-600 hover:text-slate-950 px-3 py-1.5 rounded-lg transition"
+                  className="text-xs font-medium text-slate-600 hover:text-slate-950 px-2.5 sm:px-3 py-1.5 rounded-lg transition"
                 >
                   Accedi
                 </Link>
 
                 <button
                   onClick={() => handleAzioneProtetta('/pubblica')}
-                  className="bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow-xs cursor-pointer"
+                  className="bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold px-3 sm:px-4 py-2 rounded-lg transition shadow-xs cursor-pointer"
                 >
-                  Pubblica annuncio
+                  Pubblica
                 </button>
               </>
             )}
@@ -287,10 +288,10 @@ export default function HomePage() {
       </header>
 
       {/* Sezione Ricerca & Hero Essenziale */}
-      <section className="bg-white border-b border-slate-200/80 py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto space-y-5">
+      <section className="bg-white border-b border-slate-200/80 py-6 sm:py-8 px-4 sm:px-6 w-full max-w-full">
+        <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5">
           <div className="max-w-xl">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-950 tracking-tight leading-tight">
               Scambi a mano tra quartieri.
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -298,8 +299,8 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
-            <div className="sm:col-span-6 relative">
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1 w-full max-w-full">
+            <div className="sm:col-span-6 relative w-full">
               <input
                 type="text"
                 placeholder="Cosa cerchi? (es. Lego, DVD, Fumetti, Bicicletta...)"
@@ -309,11 +310,11 @@ export default function HomePage() {
               />
             </div>
 
-            <div className="sm:col-span-4">
+            <div className="sm:col-span-4 w-full">
               <select
                 value={filtroQuartiere}
                 onChange={(e) => setFiltroQuartiere(e.target.value)}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-slate-900 transition"
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:border-slate-900 transition truncate"
               >
                 {QUARTIERI_GENOVA.map((q) => (
                   <option key={q} value={q}>
@@ -326,7 +327,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setSoloPreferiti(!soloPreferiti)}
-              className={`sm:col-span-2 text-xs font-semibold rounded-lg px-3 py-2.5 border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`sm:col-span-2 text-xs font-semibold rounded-lg px-3 py-2.5 border transition cursor-pointer flex items-center justify-center gap-1.5 w-full ${
                 soloPreferiti
                   ? 'bg-rose-50 border-rose-300 text-rose-700'
                   : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -339,10 +340,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Barra Categorie Essenziale */}
-      <section className="bg-white border-b border-slate-200 sticky top-16 z-20">
+      {/* Barra Categorie Essenziale con Scroll Orizzontale Isolato */}
+      <section className="bg-white border-b border-slate-200 sticky top-16 z-20 w-full max-w-full overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-pan-x w-full">
             {CATEGORIE.map((cat) => {
               const attiva = filtroCategoria === cat.id;
               const conteggio = cat.id === 'Tutte'
@@ -353,7 +354,7 @@ export default function HomePage() {
                 <button
                   key={cat.id}
                   onClick={() => setFiltroCategoria(cat.id)}
-                  className={`text-xs px-3 py-1.5 rounded-md transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                  className={`text-xs px-3 py-1.5 rounded-md transition whitespace-nowrap shrink-0 cursor-pointer flex items-center gap-1.5 ${
                     attiva
                       ? 'bg-slate-900 text-white font-medium'
                       : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
@@ -377,8 +378,8 @@ export default function HomePage() {
       </section>
 
       {/* Griglia Annunci */}
-      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 flex-1">
-        <div className="flex items-center justify-between mb-5">
+      <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1 overflow-x-hidden">
+        <div className="flex items-center justify-between mb-4 sm:mb-5">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
             {soloPreferiti ? 'I tuoi preferiti' : filtroCategoria}
             <span className="font-normal lowercase ml-1">({annunciFiltrati.length})</span>
@@ -402,7 +403,7 @@ export default function HomePage() {
         {caricamento && annunci.length === 0 ? (
           <div className="text-center py-20 text-slate-400 text-xs">Caricamento bacheca...</div>
         ) : annunciFiltrati.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center max-w-sm mx-auto my-8 space-y-3">
+          <div className="bg-white border border-slate-200 rounded-xl p-8 sm:p-12 text-center max-w-sm mx-auto my-8 space-y-3">
             <p className="text-sm font-semibold text-slate-900">Nessun oggetto trovato</p>
             <p className="text-xs text-slate-500">Prova a modificare i filtri o la ricerca.</p>
             <button
@@ -418,14 +419,14 @@ export default function HomePage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 w-full">
             {annunciFiltrati.map((item) => {
               const isFav = preferiti.includes(item.id);
 
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-xl border border-slate-200/90 overflow-hidden hover:border-slate-300 transition duration-150 flex flex-col justify-between group"
+                  className="bg-white rounded-xl border border-slate-200/90 overflow-hidden hover:border-slate-300 transition duration-150 flex flex-col justify-between group w-full"
                 >
                   <Link href={`/annuncio/${item.id}`} className="block flex-1">
                     <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
