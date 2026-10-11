@@ -1,3 +1,14 @@
+Ecco il file **`app/annuncio/[id]/page.tsx`** ottimizzato per eliminare il ritardo quando clicchi "Scrivi in Chat".
+
+Le modifiche chiave applicate:
+
+1. **Feedback visivo istantaneo (`avvioInCorso`)**: il pulsante mostra subito *"Apertura chat..."* e si disabilita al primo tocco, impedendo click doppi a vuoto che intasano la rete.
+2. **Query snella (`select('id')`)**: invece di richiedere campi inutili, chiede a Supabase esclusivamente l'`id` della riga per velocizzare il tempo di risposta del database.
+3. **Redirect prioritario immediato**: appena ottiene l'ID, naviga direttamente alla chat senza passaggi intermedi.
+
+Sostituisci l'intero contenuto del file su GitHub con questo:
+
+```tsx
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -210,4 +221,161 @@ export default function DettaglioAnnuncioPage({
                   <button
                     type="button"
                     onClick={() => setZoomAperto(true)}
-                    className="absolute bottom-3 right-
+                    className="absolute bottom-3 right-3 bg-slate-900/75 hover:bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1 transition"
+                  >
+                    <span>🔍</span> Ingrandisci
+                  </button>
+                  <span className="absolute top-3 left-3 bg-slate-900/75 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
+                    {fotoSelezionata + 1} / {immagini.length}
+                  </span>
+                </>
+              ) : (
+                <div className="text-center p-8">
+                  <span className="text-4xl block mb-2">📦</span>
+                  <p className="text-xs text-slate-400 font-medium">Nessuna foto disponibile</p>
+                </div>
+              )}
+            </div>
+
+            {/* Miniature cliccabili */}
+            {immagini.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {immagini.map((url, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setFotoSelezionata(idx)}
+                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 shrink-0 transition ${
+                      fotoSelezionata === idx ? 'border-blue-800 shadow-xs' : 'border-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Colonna Destra: Dettagli, Venditore & Azione */}
+          <div className="md:col-span-5 space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center text-[11px] font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
+                    📍 {annuncio.quartiere}
+                  </span>
+                  <span className="text-[11px] text-slate-400">Genova</span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">
+                  {annuncio.titolo}
+                </h1>
+              </div>
+
+              <div className="flex items-baseline gap-2 py-1">
+                <span className="text-3xl font-black text-slate-900">
+                  {annuncio.prezzo === 0 ? 'Gratis' : `${annuncio.prezzo} €`}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">Scambio a mano</span>
+              </div>
+
+              {/* Box Venditore */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-800 text-white font-black flex items-center justify-center text-sm shadow-xs">
+                    {nicknameVenditore.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900">{nicknameVenditore}</p>
+                    <p className="text-[10px] text-slate-500">Membro Zena &amp; Go</p>
+                  </div>
+                </div>
+                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">
+                  Genova
+                </span>
+              </div>
+
+              {/* Pulsante Chat con feedback reattivo */}
+              {mioId === annuncio.user_id ? (
+                <Link
+                  href="/profilo"
+                  className="w-full inline-block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl text-xs transition border border-slate-200"
+                >
+                  Questo è un tuo annuncio (gestisci)
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={avvioInCorso}
+                  onClick={avviaChat}
+                  className="w-full bg-blue-800 hover:bg-blue-900 disabled:opacity-60 text-white font-bold py-3.5 rounded-xl text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-2"
+                >
+                  <span>💬</span>
+                  <span>{avvioInCorso ? 'Apertura chat in corso...' : 'Scrivi in Chat al Venditore'}</span>
+                </button>
+              )}
+
+              {/* Descrizione Oggetto */}
+              <div className="pt-2 border-t border-slate-100">
+                <h2 className="text-xs font-bold text-slate-900 mb-2">Descrizione dell'oggetto</h2>
+                <p className="text-xs sm:text-sm text-slate-700 whitespace-pre-line leading-relaxed">
+                  {annuncio.descrizione || 'Nessuna descrizione fornita.'}
+                </p>
+              </div>
+
+              {/* Promemoria Sicurezza */}
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
+                <span>🛡️</span>
+                <span>
+                  <strong>Scambio sicuro a Genova:</strong> incontratevi sempre di persona in un luogo pubblico del quartiere e verificate l'oggetto prima di pagare in contanti.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Modal Zoom Schermo Intero (Lightbox) */}
+      {zoomAperto && immagini.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setZoomAperto(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setZoomAperto(false)}
+            className="absolute top-4 right-4 text-white text-2xl font-bold bg-white/10 hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center transition"
+          >
+            ✕
+          </button>
+          
+          <div className="max-w-4xl max-h-[80vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={immagini[fotoSelezionata]}
+              alt={annuncio.titolo}
+              className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+
+          {immagini.length > 1 && (
+            <div className="flex gap-2 mt-4 overflow-x-auto p-2" onClick={(e) => e.stopPropagation()}>
+              {immagini.map((url, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setFotoSelezionata(idx)}
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition ${
+                    fotoSelezionata === idx ? 'border-white scale-105' : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+```
