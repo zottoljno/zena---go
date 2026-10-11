@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import InstallPrompt from './InstallPrompt';
+import Footer from './Footer';
 
 interface Annuncio {
   id: number;
@@ -493,6 +494,7 @@ export default function HomePage() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
