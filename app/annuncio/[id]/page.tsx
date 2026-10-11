@@ -1,14 +1,3 @@
-Ecco il file **`app/annuncio/[id]/page.tsx`** ottimizzato per eliminare il ritardo quando clicchi "Scrivi in Chat".
-
-Le modifiche chiave applicate:
-
-1. **Feedback visivo istantaneo (`avvioInCorso`)**: il pulsante mostra subito *"Apertura chat..."* e si disabilita al primo tocco, impedendo click doppi a vuoto che intasano la rete.
-2. **Query snella (`select('id')`)**: invece di richiedere campi inutili, chiede a Supabase esclusivamente l'`id` della riga per velocizzare il tempo di risposta del database.
-3. **Redirect prioritario immediato**: appena ottiene l'ID, naviga direttamente alla chat senza passaggi intermedi.
-
-Sostituisci l'intero contenuto del file su GitHub con questo:
-
-```tsx
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -103,7 +92,6 @@ export default function DettaglioAnnuncioPage({
         return;
       }
 
-      // Ricerca rapida solo dell'ID per ridurre la latenza
       const { data: esistente } = await supabase
         .from('conversazioni')
         .select('id')
@@ -116,7 +104,6 @@ export default function DettaglioAnnuncioPage({
         return;
       }
 
-      // Creazione veloce della nuova riga
       const { data: nuova, error } = await supabase
         .from('conversazioni')
         .insert({
@@ -180,7 +167,6 @@ export default function DettaglioAnnuncioPage({
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
-      {/* Header bar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-5xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-2">
           <Link href="/" className="text-xs font-semibold text-slate-600 hover:text-blue-900 flex items-center gap-1">
@@ -206,8 +192,6 @@ export default function DettaglioAnnuncioPage({
 
       <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-          
-          {/* Colonna Sinistra: Galleria Fotografica */}
           <div className="md:col-span-7 space-y-3">
             <div className="relative bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs aspect-4/3 flex items-center justify-center group">
               {immagini.length > 0 ? (
@@ -237,7 +221,6 @@ export default function DettaglioAnnuncioPage({
               )}
             </div>
 
-            {/* Miniature cliccabili */}
             {immagini.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {immagini.map((url, idx) => (
@@ -245,9 +228,11 @@ export default function DettaglioAnnuncioPage({
                     key={idx}
                     type="button"
                     onClick={() => setFotoSelezionata(idx)}
-                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 shrink-0 transition ${
-                      fotoSelezionata === idx ? 'border-blue-800 shadow-xs' : 'border-slate-200 opacity-60 hover:opacity-100'
-                    }`}
+                    className={
+                      fotoSelezionata === idx
+                        ? 'relative w-20 h-20 rounded-xl overflow-hidden border-2 shrink-0 transition border-blue-800 shadow-xs'
+                        : 'relative w-20 h-20 rounded-xl overflow-hidden border-2 shrink-0 transition border-slate-200 opacity-60 hover:opacity-100'
+                    }
                   >
                     <img src={url} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -256,7 +241,6 @@ export default function DettaglioAnnuncioPage({
             )}
           </div>
 
-          {/* Colonna Destra: Dettagli, Venditore & Azione */}
           <div className="md:col-span-5 space-y-4">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
               <div>
@@ -278,7 +262,6 @@ export default function DettaglioAnnuncioPage({
                 <span className="text-xs text-slate-500 font-medium">Scambio a mano</span>
               </div>
 
-              {/* Box Venditore */}
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-blue-800 text-white font-black flex items-center justify-center text-sm shadow-xs">
@@ -294,7 +277,6 @@ export default function DettaglioAnnuncioPage({
                 </span>
               </div>
 
-              {/* Pulsante Chat con feedback reattivo */}
               {mioId === annuncio.user_id ? (
                 <Link
                   href="/profilo"
@@ -314,7 +296,6 @@ export default function DettaglioAnnuncioPage({
                 </button>
               )}
 
-              {/* Descrizione Oggetto */}
               <div className="pt-2 border-t border-slate-100">
                 <h2 className="text-xs font-bold text-slate-900 mb-2">Descrizione dell'oggetto</h2>
                 <p className="text-xs sm:text-sm text-slate-700 whitespace-pre-line leading-relaxed">
@@ -322,7 +303,6 @@ export default function DettaglioAnnuncioPage({
                 </p>
               </div>
 
-              {/* Promemoria Sicurezza */}
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
                 <span>🛡️</span>
                 <span>
@@ -334,7 +314,6 @@ export default function DettaglioAnnuncioPage({
         </div>
       </main>
 
-      {/* Modal Zoom Schermo Intero (Lightbox) */}
       {zoomAperto && immagini.length > 0 && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm"
@@ -363,9 +342,11 @@ export default function DettaglioAnnuncioPage({
                   key={idx}
                   type="button"
                   onClick={() => setFotoSelezionata(idx)}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition ${
-                    fotoSelezionata === idx ? 'border-white scale-105' : 'border-transparent opacity-50 hover:opacity-100'
-                  }`}
+                  className={
+                    fotoSelezionata === idx
+                      ? 'w-14 h-14 rounded-lg overflow-hidden border-2 transition border-white scale-105'
+                      : 'w-14 h-14 rounded-lg overflow-hidden border-2 transition border-transparent opacity-50 hover:opacity-100'
+                  }
                 >
                   <img src={url} alt="" className="w-full h-full object-cover" />
                 </button>
@@ -377,5 +358,3 @@ export default function DettaglioAnnuncioPage({
     </div>
   );
 }
-
-```
